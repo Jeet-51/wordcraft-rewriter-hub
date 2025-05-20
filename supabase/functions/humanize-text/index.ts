@@ -48,10 +48,34 @@ serve(async (req) => {
       }),
     });
 
+    // Check response status
     if (!response.ok) {
-      const errorData = await response.json();
-      console.error("Undetectable.AI API error:", errorData);
-      throw new Error(`API error: ${errorData.message || response.statusText}`);
+      // Log detailed information about non-successful responses
+      console.error(`API responded with status ${response.status}: ${response.statusText}`);
+      
+      // Try to get more details about the error
+      let errorDetails;
+      const contentType = response.headers.get("content-type") || "";
+      
+      if (contentType.includes("application/json")) {
+        errorDetails = await response.json();
+        console.error("API error details:", errorDetails);
+      } else {
+        const textResponse = await response.text();
+        console.error("API response (text):", textResponse.substring(0, 200)); // Log first 200 chars to avoid huge logs
+        errorDetails = { message: "Non-JSON response received" };
+      }
+      
+      throw new Error(`API error: ${errorDetails.message || response.statusText}`);
+    }
+
+    // Check content type to ensure we're handling JSON
+    const contentType = response.headers.get("content-type") || "";
+    if (!contentType.includes("application/json")) {
+      const textResponse = await response.text();
+      console.error("Unexpected content type:", contentType);
+      console.error("Response preview:", textResponse.substring(0, 200));
+      throw new Error("API returned non-JSON response");
     }
 
     const data = await response.json();
