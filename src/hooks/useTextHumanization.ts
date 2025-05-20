@@ -5,13 +5,19 @@ import { useAuth } from "@/context/AuthContext";
 import { createHumanization, getProfile, updateProfile } from "@/lib/supabase";
 import { supabase } from "@/integrations/supabase/client";
 
+interface HumanizationOptions {
+  readability?: string;
+  purpose?: string;
+  strength?: string;
+}
+
 export function useTextHumanization() {
   const [humanizedText, setHumanizedText] = useState<string>('');
   const [isHumanizing, setIsHumanizing] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
 
-  const humanizeContent = async (text: string) => {
+  const humanizeContent = async (text: string, options?: HumanizationOptions) => {
     if (!text.trim()) {
       toast({
         title: "Empty text",
@@ -59,9 +65,14 @@ export function useTextHumanization() {
         description: "Humanizing your text... This may take up to a minute.",
       });
 
-      // Call the Supabase Edge Function to humanize the text
+      // Call the Supabase Edge Function to humanize the text with options
       const { data, error } = await supabase.functions.invoke('humanize-text', {
-        body: { text: text },
+        body: { 
+          text: text,
+          readability: options?.readability || "University", 
+          purpose: options?.purpose || "General Writing",
+          strength: options?.strength || "0.9"
+        },
       });
 
       if (error) {
@@ -75,13 +86,13 @@ export function useTextHumanization() {
         throw new Error(errorMessage);
       }
 
-      // Ensure the returned text is actually different from the input
+      // Get the humanized text from response
       let resultText = data.humanizedText;
       
-      if (resultText === text) {
-        console.log("Warning: Humanized text is identical to input, applying local fallback");
-        // Apply some basic transformations to ensure text is different
-        resultText = applyBasicHumanization(text);
+      // Ensure the returned text is actually different and meaningful
+      if (resultText === text || !resultText) {
+        console.log("Warning: Humanized text is identical to input or empty");
+        throw new Error("The humanization service returned an invalid response. Please try again.");
       }
 
       // Set the humanized text
@@ -124,38 +135,6 @@ export function useTextHumanization() {
     } finally {
       setIsHumanizing(false);
     }
-  };
-  
-  // Fallback function if the API returns identical text
-  const applyBasicHumanization = (text: string): string => {
-    // Apply some basic transformations to make the text more human-like
-    return text
-      // Use contractions
-      .replace(/it is /gi, "it's ")
-      .replace(/that is /gi, "that's ")
-      .replace(/there is /gi, "there's ")
-      .replace(/what is /gi, "what's ")
-      .replace(/who is /gi, "who's ")
-      .replace(/cannot /gi, "can't ")
-      .replace(/do not /gi, "don't ")
-      .replace(/will not /gi, "won't ")
-      .replace(/should not /gi, "shouldn't ")
-      
-      // Add some variety to the text
-      .replace(/however/gi, () => {
-        const options = ["however", "but", "yet", "nevertheless", "still"];
-        return options[Math.floor(Math.random() * options.length)];
-      })
-      .replace(/additionally/gi, () => {
-        const options = ["also", "in addition", "furthermore", "plus", "moreover"];
-        return options[Math.floor(Math.random() * options.length)];
-      })
-      
-      // Add some filler words
-      .replace(/(\. )([A-Z])/g, (_, p1, p2) => {
-        const fillers = ["", " Actually, ", " You know, ", " I mean, ", " So, "];
-        return p1 + fillers[Math.floor(Math.random() * fillers.length)] + p2;
-      });
   };
 
   return {

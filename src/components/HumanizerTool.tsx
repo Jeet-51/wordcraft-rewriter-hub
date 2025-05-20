@@ -6,6 +6,15 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
 import { useTextHumanization } from "@/hooks/useTextHumanization";
 import { Copy, Loader } from "lucide-react";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
+import { Label } from "@/components/ui/label";
 
 interface HumanizerToolProps {
   initialText?: string;
@@ -15,6 +24,9 @@ interface HumanizerToolProps {
 export function HumanizerTool({ initialText = "", initialHumanizedText = "" }: HumanizerToolProps) {
   const [inputText, setInputText] = useState(initialText);
   const [outputText, setOutputText] = useState(initialHumanizedText);
+  const [readability, setReadability] = useState<string>("University");
+  const [purpose, setPurpose] = useState<string>("General Writing");
+  const [strength, setStrength] = useState<number>(0.9);
   const { toast } = useToast();
   const { user } = useAuth();
   
@@ -76,7 +88,12 @@ export function HumanizerTool({ initialText = "", initialHumanizedText = "" }: H
       // Clear previous output when starting new humanization
       setOutputText("");
       
-      const result = await humanizeContent(inputText);
+      const result = await humanizeContent(inputText, {
+        readability,
+        purpose,
+        strength: strength.toString()
+      });
+      
       if (result) {
         setOutputText(result);
       }
@@ -111,6 +128,63 @@ export function HumanizerTool({ initialText = "", initialHumanizedText = "" }: H
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
         />
+        
+        <div className="grid gap-4 py-2">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="readability">Readability Level</Label>
+              <Select 
+                value={readability} 
+                onValueChange={setReadability}
+              >
+                <SelectTrigger id="readability">
+                  <SelectValue placeholder="Select readability level" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="High School">High School</SelectItem>
+                  <SelectItem value="University">University</SelectItem>
+                  <SelectItem value="Doctorate">Doctorate</SelectItem>
+                  <SelectItem value="Journalist">Journalist</SelectItem>
+                  <SelectItem value="Marketing">Marketing</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="purpose">Writing Purpose</Label>
+              <Select 
+                value={purpose} 
+                onValueChange={setPurpose}
+              >
+                <SelectTrigger id="purpose">
+                  <SelectValue placeholder="Select purpose" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="General Writing">General Writing</SelectItem>
+                  <SelectItem value="Academic">Academic</SelectItem>
+                  <SelectItem value="Business">Business</SelectItem>
+                  <SelectItem value="Creative">Creative</SelectItem>
+                  <SelectItem value="Technical">Technical</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="strength">Humanization Strength: {strength}</Label>
+            </div>
+            <Slider
+              id="strength"
+              value={[strength]} 
+              min={0.1}
+              max={0.9}
+              step={0.1}
+              onValueChange={values => setStrength(values[0])}
+            />
+          </div>
+        </div>
+        
         <div className="flex justify-end">
           <Button 
             onClick={handleHumanize} 
