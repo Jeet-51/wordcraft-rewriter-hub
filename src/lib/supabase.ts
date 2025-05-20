@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 // Types for our Supabase tables
@@ -152,17 +153,24 @@ export const createContactMessage = async (name: string, email: string, message:
     throw new Error("Name, email, and message are required fields");
   }
   
-  console.log("Creating contact message:", { name, email, message: message.substring(0, 20) + "...", userId });
+  console.log("Creating contact message:", { name, email, message: message.substring(0, 20) + "..." });
   
   try {
+    // Remove the user_id field if it's undefined to avoid permission issues
+    const payload = { 
+      name,
+      email,
+      message,
+    };
+    
+    // Only add user_id if it's a valid string
+    if (userId && typeof userId === 'string') {
+      Object.assign(payload, { user_id: userId });
+    }
+    
     const { data, error } = await supabase
       .from('contact_messages')
-      .insert([{ 
-        name,
-        email,
-        message,
-        user_id: userId || null 
-      }])
+      .insert([payload])
       .select();
 
     if (error) {

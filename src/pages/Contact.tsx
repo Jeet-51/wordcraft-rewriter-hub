@@ -51,12 +51,14 @@ const Contact = () => {
       setIsLoading(true);
       console.log("Submitting form with data:", data);
       
-      // Ensure we're passing all required arguments in the correct order
+      // Pass the user ID only if user is logged in and has an ID
+      const userId = user?.id || undefined;
+      
       await createContactMessage(
         data.name,
         data.email,
         data.message,
-        user?.id // This is optional and will be null if user isn't logged in
+        userId
       );
 
       toast({
