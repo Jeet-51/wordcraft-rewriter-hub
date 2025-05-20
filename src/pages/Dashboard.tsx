@@ -23,6 +23,7 @@ const Dashboard = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [humanizations, setHumanizations] = useState<Humanization[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     const loadUserData = async () => {
@@ -54,7 +55,14 @@ const Dashboard = () => {
   }, [user, toast]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!user) return;
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please login to upload documents.",
+        variant: "destructive",
+      });
+      return;
+    }
     
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -75,9 +83,10 @@ const Dashboard = () => {
     }
     
     try {
-      // In a real app, we would process the file content here
-      // For this demo, we'll just upload the file
+      setIsUploading(true);
+      console.log("Uploading document for user:", user.id);
       
+      // Upload the file
       const fileUrl = await uploadDocument(user.id, file);
       
       toast({
@@ -86,6 +95,7 @@ const Dashboard = () => {
       });
       
       // Here you would typically process the file and show results
+      console.log("File uploaded successfully:", fileUrl);
       
     } catch (error: any) {
       console.error("Error uploading file:", error);
@@ -94,6 +104,12 @@ const Dashboard = () => {
         description: error.message || "Failed to upload your file.",
         variant: "destructive",
       });
+    } finally {
+      setIsUploading(false);
+      // Reset the input
+      if (e.target) {
+        e.target.value = '';
+      }
     }
   };
   
@@ -195,10 +211,11 @@ const Dashboard = () => {
                         accept=".txt,.docx"
                         onChange={handleFileUpload}
                         className="hidden"
+                        disabled={isUploading}
                       />
                       <label 
                         htmlFor="file-upload" 
-                        className="cursor-pointer flex flex-col items-center justify-center space-y-2"
+                        className={`cursor-pointer flex flex-col items-center justify-center space-y-2 ${isUploading ? 'opacity-50' : ''}`}
                       >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
@@ -222,6 +239,11 @@ const Dashboard = () => {
                         <p className="text-xs text-muted-foreground">
                           TXT, DOCX (Max 10MB)
                         </p>
+                        {isUploading && (
+                          <p className="text-xs text-primary animate-pulse mt-2">
+                            Uploading...
+                          </p>
+                        )}
                       </label>
                     </div>
 
@@ -237,7 +259,7 @@ const Dashboard = () => {
                                     {item.original_text.substring(0, 30)}...
                                   </p>
                                   <p className="text-xs text-muted-foreground">
-                                    {new Date(item.created_at).toLocaleDateString()}
+                                    {new Date(item.created_at || '').toLocaleDateString()}
                                   </p>
                                 </div>
                                 <Button variant="ghost" size="sm">
@@ -272,7 +294,7 @@ const Dashboard = () => {
                       {humanizations.map((item) => (
                         <div key={item.id} className="rounded-lg border p-4">
                           <div className="text-sm text-muted-foreground mb-1">
-                            {new Date(item.created_at).toLocaleString()}
+                            {new Date(item.created_at || '').toLocaleString()}
                           </div>
                           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                             <div>

@@ -47,7 +47,8 @@ const Contact = () => {
   const onSubmit = async (data: FormData) => {
     try {
       setIsLoading(true);
-
+      console.log("Submitting form with data:", data);
+      
       // Only pass the user ID if the user is logged in
       await createContactMessage(
         data.name, 

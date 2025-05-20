@@ -85,34 +85,36 @@ export const getHumanizations = async (userId: string) => {
 };
 
 export const uploadDocument = async (userId: string, file: File) => {
+  if (!userId) {
+    throw new Error("User ID is required for document uploads");
+  }
+  
   const fileExt = file.name.split('.').pop();
   const fileName = `${userId}/${Math.random().toString(36).substring(2)}.${fileExt}`;
   
-  // Create documents bucket if it doesn't exist
   try {
-    const { data: buckets } = await supabase.storage.listBuckets();
-    const bucketExists = buckets?.some(b => b.name === 'documents');
-    
-    if (!bucketExists) {
-      const { error: createBucketError } = await supabase.storage.createBucket('documents', {
-        public: true
-      });
-      
-      if (createBucketError) throw createBucketError;
-    }
+    console.log("Starting file upload to documents bucket");
     
     // Now upload the file
-    const { error: storageError } = await supabase.storage
+    const { error: storageError, data } = await supabase.storage
       .from('documents')
-      .upload(fileName, file);
+      .upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: false
+      });
     
-    if (storageError) throw storageError;
+    if (storageError) {
+      console.error("Storage error during upload:", storageError);
+      throw storageError;
+    }
     
-    const { data } = supabase.storage
+    console.log("Upload successful, getting public URL");
+    
+    const { data: urlData } = supabase.storage
       .from('documents')
       .getPublicUrl(fileName);
     
-    return data.publicUrl;
+    return urlData.publicUrl;
   } catch (error) {
     console.error("Error with document storage:", error);
     throw error;
@@ -121,6 +123,8 @@ export const uploadDocument = async (userId: string, file: File) => {
 
 // Updated function for contact messages to fix permission issues
 export const createContactMessage = async (name: string, email: string, message: string, userId?: string) => {
+  console.log("Creating contact message:", { name, email, message: message.substring(0, 20) + "...", userId });
+  
   // Create the contact message without referencing auth.users
   const { data, error } = await supabase
     .from('contact_messages')
@@ -134,7 +138,12 @@ export const createContactMessage = async (name: string, email: string, message:
     ])
     .select();
 
-  if (error) throw error;
+  if (error) {
+    console.error("Error creating contact message:", error);
+    throw error;
+  }
+  
+  console.log("Contact message created successfully");
   return data[0] as ContactMessage;
 };
 
