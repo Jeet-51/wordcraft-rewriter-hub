@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -128,12 +127,12 @@ const Dashboard = () => {
     }
   };
 
-  const handleExtractedText = (originalText: string, humanized?: string) => {
+  const handleExtractedText = (originalText: string, humanizedText?: string) => {
     setExtractedText(originalText);
     
     // If humanized text is provided, set it and switch to humanizer tab
-    if (humanized) {
-      setHumanizedText(humanized);
+    if (humanizedText) {
+      setHumanizedText(humanizedText);
       setActiveTab("humanizer");
     } else {
       // If only original text is provided (backward compatibility)

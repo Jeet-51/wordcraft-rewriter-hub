@@ -12,7 +12,7 @@ interface DocumentExtractorProps {
   fileUrl: string;
   fileName: string;
   fileType: string;
-  onExtracted: (text: string) => void;
+  onExtracted: (text: string, humanizedText?: string) => void;
 }
 
 export function DocumentExtractor({
@@ -72,6 +72,7 @@ export function DocumentExtractor({
       const text = await extractTextFromDocument(fileUrl, fileType);
       
       setExtractedText(text);
+      // Only pass the first argument here since we don't have humanized text yet
       onExtracted(text);
       
       toast({
