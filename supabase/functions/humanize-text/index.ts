@@ -21,41 +21,41 @@ serve(async (req) => {
       throw new Error("Text parameter is required and must be a string");
     }
 
-    // Use HuggingFace API for text humanization if API key exists
-    const hfToken = Deno.env.get('HUGGING_FACE_ACCESS_TOKEN');
+    // Get the Humanizer API key from environment variables
+    const humanizationApiKey = Deno.env.get('HUMANIZER_API_KEY');
     let humanizedText = "";
 
-    if (hfToken) {
-      console.log("Using HuggingFace API for humanization");
+    if (humanizationApiKey) {
+      console.log("Using Humanizer API for content transformation");
       try {
-        const response = await fetch("https://api-inference.huggingface.co/models/meta-llama/Llama-2-7b-chat-hf", {
+        // Call the Humanizer API with the text
+        const response = await fetch("https://api.humanizer.ai/v1/text/humanize", {
           method: "POST",
           headers: {
-            "Authorization": `Bearer ${hfToken}`,
+            "Authorization": `Bearer ${humanizationApiKey}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            inputs: `Rewrite the following text to sound more human and natural, without changing its meaning: "${text}"`,
-            parameters: {
-              max_new_tokens: 2048,
-              temperature: 0.7,
-              top_p: 0.9,
-            }
+            text: text,
+            tone: "natural",
+            fluency: "high",
+            creativity: "medium"
           }),
         });
 
         const data = await response.json();
         
-        if (data && data[0] && data[0].generated_text) {
-          // Parse out just the response part, not the prompt
-          humanizedText = data[0].generated_text.replace(
-            new RegExp(`Rewrite the following text to sound more human and natural, without changing its meaning: "${text}"`),
-            ""
-          ).trim();
+        if (data && data.humanizedText) {
+          humanizedText = data.humanizedText;
+        } else if (data && data.error) {
+          throw new Error(`API Error: ${data.error}`);
+        } else {
+          throw new Error("Failed to get valid response from Humanizer API");
         }
       } catch (apiError) {
-        console.error("HuggingFace API error:", apiError);
-        // Fall back to local method
+        console.error("Humanizer API error:", apiError);
+        // Fall back to local method if API call fails
+        console.log("Falling back to local humanization method");
         humanizedText = localHumanize(text);
       }
     } else {

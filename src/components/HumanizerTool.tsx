@@ -4,8 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
-import { createHumanization, getProfile, updateProfile } from "@/lib/supabase";
-import { supabase } from "@/integrations/supabase/client";
+import { useTextHumanization } from "@/hooks/useTextHumanization";
 import { Copy, Loader } from "lucide-react";
 
 interface HumanizerToolProps {
@@ -16,11 +15,17 @@ interface HumanizerToolProps {
 export function HumanizerTool({ initialText = "", initialHumanizedText = "" }: HumanizerToolProps) {
   const [inputText, setInputText] = useState(initialText);
   const [outputText, setOutputText] = useState(initialHumanizedText);
-  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
-
-  // Update input and output text when props change
+  
+  const {
+    humanizedText,
+    setHumanizedText,
+    isHumanizing,
+    humanizeContent
+  } = useTextHumanization();
+  
+  // Update input text when props change
   useEffect(() => {
     if (initialText) {
       setInputText(initialText);
@@ -28,8 +33,16 @@ export function HumanizerTool({ initialText = "", initialHumanizedText = "" }: H
     
     if (initialHumanizedText) {
       setOutputText(initialHumanizedText);
+      setHumanizedText(initialHumanizedText);
     }
-  }, [initialText, initialHumanizedText]);
+  }, [initialText, initialHumanizedText, setHumanizedText]);
+  
+  // Update output text when humanizedText changes
+  useEffect(() => {
+    if (humanizedText) {
+      setOutputText(humanizedText);
+    }
+  }, [humanizedText]);
 
   const handleHumanize = async () => {
     if (!inputText.trim()) {
@@ -51,49 +64,10 @@ export function HumanizerTool({ initialText = "", initialHumanizedText = "" }: H
     }
 
     try {
-      setIsLoading(true);
-
-      // Get user profile to check credits
-      const profile = await getProfile(user.id);
-      
-      if (profile.credits_used >= profile.credits_total) {
-        toast({
-          title: "No credits remaining",
-          description: "You've used all your available credits. Please upgrade your plan.",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
+      const result = await humanizeContent(inputText);
+      if (result) {
+        setOutputText(result);
       }
-
-      // Call the Supabase Edge Function to humanize the text
-      const { data, error } = await supabase.functions.invoke('humanize-text', {
-        body: { text: inputText },
-      });
-
-      if (error) {
-        throw new Error(error.message || "Failed to humanize text");
-      }
-
-      if (!data.success) {
-        throw new Error(data.error || "Failed to humanize text");
-      }
-
-      // Set the humanized text
-      setOutputText(data.humanizedText);
-
-      // Save the humanization to the database
-      await createHumanization(user.id, inputText, data.humanizedText);
-
-      // Update user credits
-      await updateProfile(user.id, {
-        credits_used: profile.credits_used + 1,
-      });
-
-      toast({
-        title: "Text humanized",
-        description: "Your text has been successfully humanized.",
-      });
     } catch (error: any) {
       console.error("Error humanizing text:", error);
       toast({
@@ -101,26 +75,6 @@ export function HumanizerTool({ initialText = "", initialHumanizedText = "" }: H
         description: error.message || "Failed to humanize text. Please try again.",
         variant: "destructive",
       });
-      
-      // Fallback to local humanization only if API fails
-      if (isLoading) {
-        toast({
-          title: "Using fallback method",
-          description: "API call failed. Using local humanization method instead.",
-        });
-        
-        // Local fallback humanization function (simple version)
-        const fallbackHumanizedText = inputText
-          .replace(/utilize/gi, "use")
-          .replace(/subsequently/gi, "then")
-          .replace(/nevertheless/gi, "however")
-          .replace(/additionally/gi, "also")
-          .replace(/furthermore/gi, "plus");
-
-        setOutputText(fallbackHumanizedText);
-      }
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -148,10 +102,10 @@ export function HumanizerTool({ initialText = "", initialHumanizedText = "" }: H
         <div className="flex justify-end">
           <Button 
             onClick={handleHumanize} 
-            disabled={isLoading || !inputText.trim()}
+            disabled={isHumanizing || !inputText.trim()}
             className="rounded-full shadow-button px-6"
           >
-            {isLoading ? (
+            {isHumanizing ? (
               <>
                 <Loader className="mr-2 h-4 w-4 animate-spin" />
                 Humanizing...

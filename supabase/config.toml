@@ -1,2 +1,5 @@
 
 project_id = "vfcdnecvdtmffpkylaom"
+
+[functions.humanize-text]
+verify_jwt = true
