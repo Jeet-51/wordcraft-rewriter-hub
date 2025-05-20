@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 
@@ -32,98 +33,128 @@ serve(async (req) => {
       throw new Error("Text must be at least 50 characters long");
     }
 
-    // Get the OpenAI API key from environment variables
-    const openAiApiKey = Deno.env.get('OPENAI_API_KEY');
+    // Get the Undetectable AI Humanizer API key from environment variables
+    const humanizerApiKey = Deno.env.get('HUMANIZER_API_KEY');
     let humanizedText = "";
 
-    if (openAiApiKey) {
-      console.log("Using OpenAI GPT-4 Turbo for content transformation");
+    if (humanizerApiKey) {
+      console.log("Using Undetectable AI Humanizer API v2 for text transformation");
       try {
-        const payload = {
-          model: "gpt-4o-mini", // Using gpt-4o-mini as a more modern alternative
-          messages: [
-            {
-              role: "system",
-              content: "You are an expert editor that rewrites AI-generated content to sound natural, human-like, and context-appropriate. Preserve the original intent while improving flow, tone, and clarity. Avoid sounding robotic or generic."
-            },
-            {
-              role: "user",
-              content: `Humanize the following text:\n\n"${text}"`
-            }
-          ],
-          temperature: 0.7
-        };
-
-        console.log("Sending request to OpenAI API");
-        
-        const openaiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+        // Stage 1: Submit the content to the Humanizer API
+        const submitResponse = await fetch("https://humanize.undetectable.ai/submit", {
           method: "POST",
           headers: {
-            "Authorization": `Bearer ${openAiApiKey}`,
-            "Content-Type": "application/json",
+            "apikey": humanizerApiKey,
+            "Content-Type": "application/json"
           },
-          body: JSON.stringify(payload),
+          body: JSON.stringify({
+            content: text,
+            readability: "standard", // Default to standard readability
+            purpose: "general",      // Default to general purpose
+            strength: 0.6           // Medium strength (0.4-0.8 is recommended)
+          })
         });
 
-        // Check HTTP status code first
-        if (!openaiResponse.ok) {
-          const statusText = openaiResponse.statusText;
-          let errorDetail;
+        // Check if the submission was successful
+        if (!submitResponse.ok) {
+          const errorBody = await submitResponse.text();
+          console.error(`Humanizer API error (${submitResponse.status}): ${errorBody}`);
           
+          let errorMessage = `API Error: ${submitResponse.status}`;
           try {
-            const errorBody = await openaiResponse.text();
-            console.error(`OpenAI API error response body: ${errorBody}`);
+            const errorJson = JSON.parse(errorBody);
             
-            try {
-              // Try to parse as JSON if possible
-              errorDetail = JSON.parse(errorBody);
-            } catch {
-              // Otherwise use as text
-              errorDetail = errorBody;
+            // Check if it's an insufficient credits error
+            if (errorJson.error && errorJson.error.includes("Insufficient credits")) {
+              errorMessage = "Insufficient credits to humanize text. Please upgrade your plan.";
+            } else if (errorJson.error) {
+              errorMessage = errorJson.error;
             }
           } catch (e) {
-            errorDetail = "Unable to read error response";
+            // If parsing fails, use the error body as message
+            errorMessage = errorBody || `API Error: ${submitResponse.status}`;
           }
           
-          throw new Error(`OpenAI API failed with status ${openaiResponse.status}: ${statusText}. Details: ${JSON.stringify(errorDetail)}`);
+          throw new Error(errorMessage);
         }
 
-        // Parse response as JSON
-        let responseData;
-        try {
-          responseData = await openaiResponse.json();
-        } catch (jsonError) {
-          console.error("Error parsing OpenAI response:", jsonError);
-          const responseText = await openaiResponse.text();
-          console.error(`Raw OpenAI response: ${responseText}`);
-          throw new Error("Invalid JSON response from OpenAI API");
-        }
+        // Parse the response to get the document ID
+        const submissionData = await submitResponse.json();
         
-        if (!responseData || !responseData.choices || !responseData.choices[0]?.message?.content) {
-          console.error("OpenAI response data:", responseData);
-          throw new Error("Failed to get content from OpenAI API");
+        if (!submissionData || !submissionData.id) {
+          console.error("Invalid submission response:", submissionData);
+          throw new Error("Failed to get document ID from Humanizer API");
         }
 
-        humanizedText = responseData.choices[0].message.content.trim();
+        const documentId = submissionData.id;
+        console.log(`Document submitted successfully. ID: ${documentId}`);
+
+        // Stage 2: Poll for the document result
+        const maxAttempts = 20;  // Maximum number of polling attempts
+        const pollInterval = 5000;  // 5 seconds between polls
         
-        // Validate that we got a meaningful response back
-        if (!humanizedText || humanizedText.length < 20) {
-          console.error("OpenAI returned an empty or very short response");
-          throw new Error("OpenAI returned an empty or very short response");
+        let attempts = 0;
+        let documentData;
+        
+        while (attempts < maxAttempts) {
+          attempts++;
+          
+          console.log(`Polling attempt ${attempts}/${maxAttempts} for document ${documentId}`);
+          
+          // Wait for pollInterval before next attempt (except first attempt)
+          if (attempts > 1) {
+            await new Promise(resolve => setTimeout(resolve, pollInterval));
+          }
+          
+          const documentResponse = await fetch(`https://humanize.undetectable.ai/document/${documentId}`, {
+            method: "GET",
+            headers: {
+              "apikey": humanizerApiKey,
+              "Content-Type": "application/json"
+            }
+          });
+          
+          if (!documentResponse.ok) {
+            console.error(`Error fetching document (${documentResponse.status}): ${await documentResponse.text()}`);
+            
+            // If we got a non-recoverable error (not 429), break the loop
+            if (documentResponse.status !== 429) {
+              throw new Error(`Failed to fetch document: ${documentResponse.status}`);
+            }
+            
+            // For rate limiting, continue polling after delay
+            continue;
+          }
+          
+          documentData = await documentResponse.json();
+          
+          // Check if processing is complete (output field is populated)
+          if (documentData && documentData.output) {
+            console.log("Document processing complete");
+            humanizedText = documentData.output;
+            break;
+          }
+          
+          // If still processing, continue polling
+          console.log("Document still processing, will check again...");
         }
         
-        // Remove any quotation marks that might be wrapping the response
-        humanizedText = humanizedText.replace(/^["']|["']$/g, '');
+        // Check if we got a result after all attempts
+        if (!humanizedText) {
+          console.error("Document processing timed out after maximum attempts");
+          throw new Error("Document processing timed out. Please try again later.");
+        }
         
-        console.log("Successfully retrieved humanized text from OpenAI");
+        console.log("Successfully humanized text using Undetectable AI");
       } catch (apiError) {
-        console.error("OpenAI API error:", apiError);
+        console.error("Humanizer API error:", apiError);
+        
         // Fall back to local method if API call fails
         console.log("Falling back to local humanization method");
         humanizedText = localHumanize(text);
       }
     } else {
-      console.log("OpenAI API key not found. Using local humanization method");
+      console.log("Humanizer API key not found. Using local humanization method");
       humanizedText = localHumanize(text);
     }
 

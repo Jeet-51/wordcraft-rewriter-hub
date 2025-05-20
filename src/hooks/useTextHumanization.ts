@@ -56,7 +56,7 @@ export function useTextHumanization() {
 
       toast({
         title: "Processing",
-        description: "Humanizing your text... This may take a few moments.",
+        description: "Humanizing your text... This may take up to a minute.",
       });
 
       // Call the Supabase Edge Function to humanize the text
@@ -103,9 +103,21 @@ export function useTextHumanization() {
       return resultText;
     } catch (error: any) {
       console.error("Error humanizing text:", error);
+      
+      // Check for specific error messages
+      let errorMessage = error.message || "Failed to humanize text. Please try again.";
+      
+      if (errorMessage.includes("Insufficient credits")) {
+        errorMessage = "You don't have enough credits. Please upgrade your plan.";
+      } else if (errorMessage.includes("timed out")) {
+        errorMessage = "The humanization process took too long. Please try again with a shorter text.";
+      } else if (errorMessage.includes("API Error")) {
+        errorMessage = "The Humanizer service is currently unavailable. Please try again later.";
+      }
+      
       toast({
         title: "Error",
-        description: error.message || "Failed to humanize text. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
       return null;

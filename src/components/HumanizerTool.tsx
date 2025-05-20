@@ -158,10 +158,10 @@ export function HumanizerTool({ initialText = "", initialHumanizedText = "" }: H
             <div className="flex flex-col items-center justify-center h-full">
               <Loader className="h-8 w-8 animate-spin mb-4 text-primary" />
               <p className="text-muted-foreground text-center">
-                Processing your text with GPT-4...
+                Processing your text with Undetectable AI...
               </p>
               <p className="text-sm text-muted-foreground text-center mt-2">
-                This may take a few moments
+                This may take up to a minute
               </p>
             </div>
           ) : (
