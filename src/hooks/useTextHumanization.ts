@@ -56,7 +56,7 @@ export function useTextHumanization() {
 
       toast({
         title: "Processing",
-        description: "Humanizing your text... This may take up to 20-60 seconds.",
+        description: "Humanizing your text... This may take a few moments.",
       });
 
       // Call the Supabase Edge Function to humanize the text

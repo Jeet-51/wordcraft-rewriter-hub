@@ -46,7 +46,7 @@ export function DocumentExtractor({
         // Show toast about automatic humanization
         toast({
           title: "Starting humanization",
-          description: "Automatically humanizing the extracted text. This may take up to a minute.",
+          description: "Automatically humanizing the extracted text. This may take a few moments.",
         });
         
         // Automatically humanize the text
