@@ -1,7 +1,7 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 import { Session, User } from "@supabase/supabase-js";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/integrations/supabase/client";
 
 type AuthContextType = {
   session: Session | null;
@@ -22,28 +22,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const setData = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error) throw error;
-        setSession(session);
-        setUser(session?.user ?? null);
-      } catch (error: any) {
-        console.error("Error loading session:", error.message);
-        setError(error.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    setData();
-
+    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
       }
     );
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
 
     return () => subscription.unsubscribe();
   }, []);
@@ -84,19 +76,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       });
 
       if (error) throw error;
-      
-      // Create a new profile record with default credits
-      await supabase
-        .from('profiles')
-        .insert([
-          { 
-            id: data.user?.id, 
-            username,
-            credits_total: 10,
-            credits_used: 0,
-            plan: 'free'
-          }
-        ]);
       
       setSession(data.session);
       setUser(data.user);
