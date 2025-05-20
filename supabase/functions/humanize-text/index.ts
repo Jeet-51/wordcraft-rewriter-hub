@@ -20,75 +20,16 @@ serve(async (req) => {
       throw new Error("Text parameter is required and must be a string");
     }
 
-    // Prepare request to Undetectable.AI API
-    const undetectableUserId = Deno.env.get("UNDETECTABLE_USER_ID");
-    const undetectableApiKey = Deno.env.get("UNDETECTABLE_API_KEY");
-
-    if (!undetectableUserId || !undetectableApiKey) {
-      throw new Error("Undetectable.AI credentials not configured");
-    }
-
-    // Log the exact API endpoint and credentials being used (without revealing the actual key)
-    console.log("Making request to Undetectable.AI API");
-    console.log(`Using User ID: ${undetectableUserId.substring(0, 3)}...`);
-    console.log("API endpoint: https://api.undetectable.ai/humanize");
-
-    // Make the API call to Undetectable.AI with the CORRECT endpoint URL
-    // Note: Based on error logs, removing the /api/v2/ part from the URL
-    const response = await fetch("https://api.undetectable.ai/humanize", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-User-ID": undetectableUserId,
-        "X-API-Key": undetectableApiKey,
-      },
-      body: JSON.stringify({
-        text: text,
-        // Optional parameters - can be adjusted based on needs
-        readability: "standard", // Options: simple, standard, advanced, expert
-        creativity: "medium",    // Options: none, low, medium, high
-        strength: "medium",      // Options: light, medium, heavy
-        language: "en",         // Language code
-      }),
-    });
-
-    // Check response status
-    if (!response.ok) {
-      // Log detailed information about non-successful responses
-      console.error(`API responded with status ${response.status}: ${response.statusText}`);
-      
-      // Try to get more details about the error
-      let errorDetails;
-      const contentType = response.headers.get("content-type") || "";
-      
-      if (contentType.includes("application/json")) {
-        errorDetails = await response.json();
-        console.error("API error details:", errorDetails);
-      } else {
-        const textResponse = await response.text();
-        console.error("API response (text):", textResponse.substring(0, 500)); // Log first 500 chars to help debug
-        errorDetails = { message: "Non-JSON response received" };
-      }
-      
-      throw new Error(`API error: ${errorDetails.message || response.statusText}`);
-    }
-
-    // Check content type to ensure we're handling JSON
-    const contentType = response.headers.get("content-type") || "";
-    if (!contentType.includes("application/json")) {
-      const textResponse = await response.text();
-      console.error("Unexpected content type:", contentType);
-      console.error("Response preview:", textResponse.substring(0, 500));
-      throw new Error("API returned non-JSON response");
-    }
-
-    const data = await response.json();
-    console.log("Successfully received humanized text from API");
+    console.log("Using local humanization method");
+    
+    // Local humanization function
+    const humanizedText = humanizeText(text);
+    console.log("Successfully humanized text");
 
     // Return the humanized text to the client
     return new Response(
       JSON.stringify({ 
-        humanizedText: data.humanized_text || data.text, 
+        humanizedText: humanizedText, 
         success: true
       }),
       {
@@ -116,3 +57,52 @@ serve(async (req) => {
     );
   }
 });
+
+// Local text humanization function
+function humanizeText(text: string): string {
+  // Basic humanization rules
+  return text
+    // Replace complex words with simpler alternatives
+    .replace(/utilize/gi, "use")
+    .replace(/subsequently/gi, "then")
+    .replace(/nevertheless/gi, "however")
+    .replace(/additionally/gi, "also")
+    .replace(/furthermore/gi, "plus")
+    .replace(/commence/gi, "start")
+    .replace(/terminate/gi, "end")
+    .replace(/endeavor/gi, "try")
+    .replace(/attempt to/gi, "try to")
+    .replace(/sufficient/gi, "enough")
+    .replace(/ascertain/gi, "find out")
+    .replace(/in the event that/gi, "if")
+    .replace(/in order to/gi, "to")
+    .replace(/for the purpose of/gi, "for")
+    .replace(/with regard to/gi, "about")
+    .replace(/in reference to/gi, "about")
+    .replace(/in relation to/gi, "about")
+    
+    // Replace overly formal phrases
+    .replace(/it is imperative that/gi, "it's important that")
+    .replace(/as a consequence of/gi, "because of")
+    .replace(/in the absence of/gi, "without")
+    .replace(/in the vicinity of/gi, "near")
+    .replace(/in conjunction with/gi, "with")
+    .replace(/in accordance with/gi, "following")
+    
+    // Add occasional contractions to sound more human
+    .replace(/it is /gi, "it's ")
+    .replace(/that is /gi, "that's ")
+    .replace(/there is /gi, "there's ")
+    .replace(/what is /gi, "what's ")
+    .replace(/who is /gi, "who's ")
+    .replace(/cannot /gi, "can't ")
+    .replace(/do not /gi, "don't ")
+    
+    // Add text variety by slightly modifying sentence structures
+    .replace(/\. However, /gi, ". But ")
+    .replace(/\. In addition, /gi, ". Also, ")
+    .replace(/\. Therefore, /gi, ". So, ")
+    
+    // Correct potential double spaces
+    .replace(/\s{2,}/g, " ");
+}
