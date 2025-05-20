@@ -28,11 +28,14 @@ serve(async (req) => {
       throw new Error("Undetectable.AI credentials not configured");
     }
 
+    // Log the exact API endpoint and credentials being used (without revealing the actual key)
     console.log("Making request to Undetectable.AI API");
-    console.log("API endpoint: https://api.undetectable.ai/api/v2/humanize");
+    console.log(`Using User ID: ${undetectableUserId.substring(0, 3)}...`);
+    console.log("API endpoint: https://api.undetectable.ai/humanize");
 
     // Make the API call to Undetectable.AI with the CORRECT endpoint URL
-    const response = await fetch("https://api.undetectable.ai/api/v2/humanize", {
+    // Note: Based on error logs, removing the /api/v2/ part from the URL
+    const response = await fetch("https://api.undetectable.ai/humanize", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -63,7 +66,7 @@ serve(async (req) => {
         console.error("API error details:", errorDetails);
       } else {
         const textResponse = await response.text();
-        console.error("API response (text):", textResponse.substring(0, 200)); // Log first 200 chars to avoid huge logs
+        console.error("API response (text):", textResponse.substring(0, 500)); // Log first 500 chars to help debug
         errorDetails = { message: "Non-JSON response received" };
       }
       
@@ -75,7 +78,7 @@ serve(async (req) => {
     if (!contentType.includes("application/json")) {
       const textResponse = await response.text();
       console.error("Unexpected content type:", contentType);
-      console.error("Response preview:", textResponse.substring(0, 200));
+      console.error("Response preview:", textResponse.substring(0, 500));
       throw new Error("API returned non-JSON response");
     }
 
