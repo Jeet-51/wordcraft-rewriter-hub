@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
 import { createHumanization, getProfile, updateProfile } from "@/lib/supabase";
 import { supabase } from "@/integrations/supabase/client";
+import { Copy, Loader } from "lucide-react";
 
 interface HumanizerToolProps {
   initialText?: string;
@@ -124,8 +125,8 @@ export function HumanizerTool({ initialText = "", initialHumanizedText = "" }: H
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <div className="space-y-3">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold">Original Text</h3>
           <Button 
@@ -133,13 +134,14 @@ export function HumanizerTool({ initialText = "", initialHumanizedText = "" }: H
             size="sm" 
             onClick={() => setInputText("")}
             disabled={!inputText}
+            className="rounded-full text-muted-foreground"
           >
             Clear
           </Button>
         </div>
         <Textarea
           placeholder="Paste your AI-generated text here..."
-          className="h-64 resize-none"
+          className="h-64 resize-none rounded-xl border-muted shadow-sm transition-all focus-visible:ring-2 focus-visible:ring-primary/50"
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
         />
@@ -147,12 +149,20 @@ export function HumanizerTool({ initialText = "", initialHumanizedText = "" }: H
           <Button 
             onClick={handleHumanize} 
             disabled={isLoading || !inputText.trim()}
+            className="rounded-full shadow-button px-6"
           >
-            {isLoading ? "Humanizing..." : "Humanize Text"}
+            {isLoading ? (
+              <>
+                <Loader className="mr-2 h-4 w-4 animate-spin" />
+                Humanizing...
+              </>
+            ) : (
+              "Humanize Text"
+            )}
           </Button>
         </div>
       </div>
-      <div className="space-y-3">
+      <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold">Humanized Result</h3>
           <Button
@@ -165,17 +175,20 @@ export function HumanizerTool({ initialText = "", initialHumanizedText = "" }: H
               }
             }}
             disabled={!outputText}
+            className="rounded-full"
           >
-            Copy
+            <Copy className="mr-2 h-4 w-4" /> Copy
           </Button>
         </div>
-        <div className="border rounded-md p-4 h-64 overflow-auto bg-muted/30">
+        <div className="border rounded-xl p-6 h-64 overflow-auto bg-white/50 shadow-sm">
           {outputText ? (
-            <p className="whitespace-pre-wrap">{outputText}</p>
+            <p className="whitespace-pre-wrap text-left">{outputText}</p>
           ) : (
-            <p className="text-muted-foreground text-center mt-20">
-              Your humanized text will appear here
-            </p>
+            <div className="flex items-center justify-center h-full">
+              <p className="text-muted-foreground text-center">
+                Your humanized text will appear here
+              </p>
+            </div>
           )}
         </div>
       </div>

@@ -15,6 +15,11 @@ export function useDocumentExtraction() {
       // Log the extraction attempt
       console.log(`Starting text extraction for ${fileType} file from ${fileUrl}`);
       
+      toast({
+        title: "Processing document",
+        description: "Extracting text from your document...",
+      });
+      
       // Extract text from the document
       const text = await extractTextFromDocument(fileUrl, fileType);
       
