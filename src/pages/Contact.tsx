@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -47,12 +48,12 @@ const Contact = () => {
     try {
       setIsLoading(true);
 
-      // Save the contact message to Supabase
+      // Only pass the user ID if the user is logged in
       await createContactMessage(
         data.name, 
         data.email, 
         data.message,
-        user?.id // Include the user ID if available
+        user?.id // This will be undefined if user isn't logged in
       );
 
       toast({

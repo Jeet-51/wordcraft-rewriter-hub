@@ -101,18 +101,19 @@ export const uploadDocument = async (userId: string, file: File) => {
   return data.publicUrl;
 };
 
-// New functions for contact messages
+// Updated function for contact messages to fix permission issues
 export const createContactMessage = async (name: string, email: string, message: string, userId?: string) => {
-  const contactData = {
-    name,
-    email,
-    message,
-    user_id: userId || null
-  };
-
+  // Create the contact message without referencing auth.users
   const { data, error } = await supabase
     .from('contact_messages')
-    .insert([contactData])
+    .insert([
+      { 
+        name,
+        email,
+        message,
+        user_id: userId || null 
+      }
+    ])
     .select();
 
   if (error) throw error;
