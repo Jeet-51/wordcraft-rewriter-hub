@@ -3,48 +3,13 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
 import { createHumanization, getProfile, updateProfile } from "@/lib/supabase";
+import { supabase } from "@/integrations/supabase/client";
 
 export function useTextHumanization() {
   const [humanizedText, setHumanizedText] = useState<string>('');
   const [isHumanizing, setIsHumanizing] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
-
-  // Simple humanize function (same as in DocumentExtractor)
-  const humanizeText = (text: string): string => {
-    // Placeholder humanization logic - in a real app, this would call an API
-    const words = text.split(" ");
-    
-    // Simple transformations to simulate AI humanization
-    const humanizedWords = words.map(word => {
-      // Randomly replace some common words
-      if (word.toLowerCase() === "utilize") return "use";
-      if (word.toLowerCase() === "subsequently") return "then";
-      if (word.toLowerCase() === "nevertheless") return "however";
-      if (word.toLowerCase() === "additionally") return "also";
-      if (word.toLowerCase() === "furthermore") return "plus";
-      
-      // Randomly change word order or add small variations for longer text
-      if (Math.random() > 0.9 && words.length > 20) {
-        return word + " actually";
-      }
-      
-      return word;
-    });
-    
-    // Add some natural variations to sentence structure
-    let result = humanizedWords.join(" ");
-    
-    // Sometimes add filler words at the start of sentences
-    result = result.replace(/\. ([A-Z])/g, (match, p1) => {
-      const fillers = ["Well, ", "So, ", "I think ", "Actually, "];
-      return Math.random() > 0.7 
-        ? ". " + fillers[Math.floor(Math.random() * fillers.length)] + p1 
-        : ". " + p1;
-    });
-    
-    return result;
-  };
 
   const humanizeContent = async (text: string) => {
     if (!user) {
@@ -71,12 +36,29 @@ export function useTextHumanization() {
         return null;
       }
 
-      // Process the text
-      const humanized = humanizeText(text);
-      setHumanizedText(humanized);
+      toast({
+        title: "Processing",
+        description: "Humanizing your text...",
+      });
+
+      // Call the Supabase Edge Function to humanize the text
+      const { data, error } = await supabase.functions.invoke('humanize-text', {
+        body: { text: text },
+      });
+
+      if (error) {
+        throw new Error(error.message || "Failed to humanize text");
+      }
+
+      if (!data.success) {
+        throw new Error(data.error || "Failed to humanize text");
+      }
+
+      // Set the humanized text
+      setHumanizedText(data.humanizedText);
 
       // Save the humanization to the database
-      await createHumanization(user.id, text, humanized);
+      await createHumanization(user.id, text, data.humanizedText);
 
       // Update user credits
       await updateProfile(user.id, {
@@ -88,7 +70,7 @@ export function useTextHumanization() {
         description: "Your text has been successfully humanized.",
       });
       
-      return humanized;
+      return data.humanizedText;
     } catch (error: any) {
       console.error("Error humanizing text:", error);
       toast({

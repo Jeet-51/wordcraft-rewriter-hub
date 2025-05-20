@@ -1,5 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -20,10 +21,48 @@ serve(async (req) => {
       throw new Error("Text parameter is required and must be a string");
     }
 
-    console.log("Using local humanization method");
-    
-    // Local humanization function
-    const humanizedText = humanizeText(text);
+    // Use HuggingFace API for text humanization if API key exists
+    const hfToken = Deno.env.get('HUGGING_FACE_ACCESS_TOKEN');
+    let humanizedText = "";
+
+    if (hfToken) {
+      console.log("Using HuggingFace API for humanization");
+      try {
+        const response = await fetch("https://api-inference.huggingface.co/models/meta-llama/Llama-2-7b-chat-hf", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${hfToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            inputs: `Rewrite the following text to sound more human and natural, without changing its meaning: "${text}"`,
+            parameters: {
+              max_new_tokens: 2048,
+              temperature: 0.7,
+              top_p: 0.9,
+            }
+          }),
+        });
+
+        const data = await response.json();
+        
+        if (data && data[0] && data[0].generated_text) {
+          // Parse out just the response part, not the prompt
+          humanizedText = data[0].generated_text.replace(
+            new RegExp(`Rewrite the following text to sound more human and natural, without changing its meaning: "${text}"`),
+            ""
+          ).trim();
+        }
+      } catch (apiError) {
+        console.error("HuggingFace API error:", apiError);
+        // Fall back to local method
+        humanizedText = localHumanize(text);
+      }
+    } else {
+      console.log("Using local humanization method");
+      humanizedText = localHumanize(text);
+    }
+
     console.log("Successfully humanized text");
 
     // Return the humanized text to the client
@@ -59,8 +98,8 @@ serve(async (req) => {
 });
 
 // Local text humanization function
-function humanizeText(text: string): string {
-  // Basic humanization rules
+function localHumanize(text: string): string {
+  // Enhanced humanization rules
   return text
     // Replace complex words with simpler alternatives
     .replace(/utilize/gi, "use")
@@ -102,6 +141,18 @@ function humanizeText(text: string): string {
     .replace(/\. However, /gi, ". But ")
     .replace(/\. In addition, /gi, ". Also, ")
     .replace(/\. Therefore, /gi, ". So, ")
+    
+    // Add some filler words to simulate more natural speech
+    .replace(/(\. )([A-Z])/g, (_, p1, p2) => {
+      const fillers = ["", " Actually, ", " You know, ", " I mean, ", " So, "];
+      return p1 + fillers[Math.floor(Math.random() * fillers.length)] + p2;
+    })
+    
+    // Add some variety to the beginning of sentences
+    .replace(/^I /gm, () => {
+      const starters = ["I ", "Personally, I ", "To be honest, I "];
+      return starters[Math.floor(Math.random() * starters.length)];
+    })
     
     // Correct potential double spaces
     .replace(/\s{2,}/g, " ");

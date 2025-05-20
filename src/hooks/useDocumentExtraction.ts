@@ -17,14 +17,14 @@ export function useDocumentExtraction() {
       
       toast({
         title: "Processing document",
-        description: "Extracting text from your document...",
+        description: `Extracting text from your ${fileType.toUpperCase()} document...`,
       });
       
       // Extract text from the document
       const text = await extractTextFromDocument(fileUrl, fileType);
       
       // Check if we got meaningful text
-      if (text && text.length > 10) {
+      if (text && text.length > 10 && !text.startsWith("Error")) {
         console.log(`Successfully extracted ${text.length} characters`);
         setExtractedText(text);
         
@@ -35,17 +35,27 @@ export function useDocumentExtraction() {
         
         return text;
       } else {
-        console.log("Extraction returned empty or very short text");
-        const errorMsg = "Could not extract meaningful text from this document.";
+        console.log("Extraction returned error or very short text:", text);
+        
+        // Display a more specific message based on file type
+        let errorMsg = "";
+        if (fileType === "pdf") {
+          errorMsg = "Could not extract meaningful text from this PDF. The file may be scanned or image-based.";
+        } else if (fileType === "docx") {
+          errorMsg = "Could not properly extract text from this DOCX file. It may contain complex formatting or be corrupted.";
+        } else {
+          errorMsg = "Could not extract meaningful text from this document.";
+        }
         
         toast({
           title: "Limited extraction",
-          description: "Only limited text could be extracted. Try a different file format.",
+          description: errorMsg,
           variant: "destructive",
         });
         
         // Set a helpful message in the extracted text
-        const helpText = `The ${fileType.toUpperCase()} document could not be properly parsed. ` +
+        const helpText = text.startsWith("Error") ? text : 
+                        `The ${fileType.toUpperCase()} document could not be properly parsed. ` +
                         `For best results, try uploading a plain text (.txt) file instead.`;
         
         setExtractedText(helpText);

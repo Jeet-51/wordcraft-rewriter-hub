@@ -1,8 +1,2 @@
 
 project_id = "vfcdnecvdtmffpkylaom"
-
-[storage.documents]
-public = true
-
-[functions.humanize-text]
-verify_jwt = true
