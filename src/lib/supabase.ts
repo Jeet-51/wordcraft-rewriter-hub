@@ -88,17 +88,35 @@ export const uploadDocument = async (userId: string, file: File) => {
   const fileExt = file.name.split('.').pop();
   const fileName = `${userId}/${Math.random().toString(36).substring(2)}.${fileExt}`;
   
-  const { error: storageError } = await supabase.storage
-    .from('documents')
-    .upload(fileName, file);
-  
-  if (storageError) throw storageError;
-  
-  const { data } = supabase.storage
-    .from('documents')
-    .getPublicUrl(fileName);
-  
-  return data.publicUrl;
+  // Create documents bucket if it doesn't exist
+  try {
+    const { data: buckets } = await supabase.storage.listBuckets();
+    const bucketExists = buckets?.some(b => b.name === 'documents');
+    
+    if (!bucketExists) {
+      const { error: createBucketError } = await supabase.storage.createBucket('documents', {
+        public: true
+      });
+      
+      if (createBucketError) throw createBucketError;
+    }
+    
+    // Now upload the file
+    const { error: storageError } = await supabase.storage
+      .from('documents')
+      .upload(fileName, file);
+    
+    if (storageError) throw storageError;
+    
+    const { data } = supabase.storage
+      .from('documents')
+      .getPublicUrl(fileName);
+    
+    return data.publicUrl;
+  } catch (error) {
+    console.error("Error with document storage:", error);
+    throw error;
+  }
 };
 
 // Updated function for contact messages to fix permission issues
