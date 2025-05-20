@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 // Types for our Supabase tables
@@ -147,30 +146,36 @@ export const extractTextFromDocument = async (fileUrl: string, fileType: string)
   });
 };
 
-// Updated function for contact messages to fix permission issues
+// Updated function for contact messages to ensure proper format and error handling
 export const createContactMessage = async (name: string, email: string, message: string, userId?: string) => {
+  if (!name || !email || !message) {
+    throw new Error("Name, email, and message are required fields");
+  }
+  
   console.log("Creating contact message:", { name, email, message: message.substring(0, 20) + "...", userId });
   
-  // Create the contact message without referencing auth.users
-  const { data, error } = await supabase
-    .from('contact_messages')
-    .insert([
-      { 
+  try {
+    const { data, error } = await supabase
+      .from('contact_messages')
+      .insert([{ 
         name,
         email,
         message,
         user_id: userId || null 
-      }
-    ])
-    .select();
+      }])
+      .select();
 
-  if (error) {
-    console.error("Error creating contact message:", error);
+    if (error) {
+      console.error("Error creating contact message:", error);
+      throw error;
+    }
+    
+    console.log("Contact message created successfully:", data);
+    return data[0] as ContactMessage;
+  } catch (error) {
+    console.error("Failed to create contact message:", error);
     throw error;
   }
-  
-  console.log("Contact message created successfully");
-  return data[0] as ContactMessage;
 };
 
 export const getContactMessages = async (userId: string) => {
