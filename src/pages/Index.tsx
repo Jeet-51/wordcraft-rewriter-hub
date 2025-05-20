@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight, CheckCircle } from "lucide-react";
+import { AspectRatio } from "@/components/ui/aspect-ratio";
 
 const Index = () => {
   return (
@@ -56,13 +57,16 @@ const Index = () => {
               transition={{ duration: 0.5, delay: 0.3 }}
               className="flex items-center justify-center"
             >
-              <img
-                src="https://images.unsplash.com/photo-1655635949212-1d8f4f103ea4?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&h=400&q=80"
-                alt="AI text humanization"
-                className="rounded-lg object-cover shadow-lg hover:shadow-xl transition-all w-full h-auto"
-                width={600}
-                height={400}
-              />
+              <div className="w-full rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-all">
+                <AspectRatio ratio={3/2} className="bg-gray-100">
+                  <img
+                    src="https://images.unsplash.com/photo-1655635949212-1d8f4f103ea4?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&h=400&q=80"
+                    alt="AI text humanization"
+                    className="object-cover w-full h-full"
+                    loading="eager"
+                  />
+                </AspectRatio>
+              </div>
             </motion.div>
           </div>
         </div>
@@ -173,6 +177,7 @@ const Index = () => {
                         src={testimonial.avatar} 
                         alt={testimonial.name}
                         className="w-full h-full object-cover"
+                        loading="eager"
                       />
                     </div>
                     <div>
@@ -197,8 +202,9 @@ const Index = () => {
                         <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                       </svg>
                     ))}
-                    {testimonial.stars < 5 && (
+                    {testimonial.stars < 5 && [...Array(5 - testimonial.stars)].map((_, i) => (
                       <svg
+                        key={`empty-${i}`}
                         xmlns="http://www.w3.org/2000/svg"
                         width="16"
                         height="16"
@@ -212,7 +218,7 @@ const Index = () => {
                       >
                         <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                       </svg>
-                    )}
+                    ))}
                   </div>
                   <p className="text-muted-foreground">
                     "{testimonial.text}"
