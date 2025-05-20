@@ -21,6 +21,15 @@ export function useTextHumanization() {
       return null;
     }
     
+    if (text.length < 50) {
+      toast({
+        title: "Text too short",
+        description: "Text must be at least 50 characters long for effective humanization.",
+        variant: "destructive",
+      });
+      return null;
+    }
+    
     if (!user) {
       toast({
         title: "Authentication required",
@@ -47,7 +56,7 @@ export function useTextHumanization() {
 
       toast({
         title: "Processing",
-        description: "Humanizing your text...",
+        description: "Humanizing your text... This may take up to 20-60 seconds.",
       });
 
       // Call the Supabase Edge Function to humanize the text
@@ -64,8 +73,6 @@ export function useTextHumanization() {
       }
 
       // Ensure the returned text is actually different from the input
-      // If they're identical (which might indicate the API failed silently),
-      // apply local humanization as a fallback
       let resultText = data.humanizedText;
       
       if (resultText === text) {

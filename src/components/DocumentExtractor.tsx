@@ -5,6 +5,7 @@ import { DocumentHeader } from "./document/DocumentHeader";
 import { TextPreview } from "./document/TextPreview";
 import { useDocumentExtraction } from "@/hooks/useDocumentExtraction";
 import { useTextHumanization } from "@/hooks/useTextHumanization";
+import { useToast } from "@/hooks/use-toast";
 
 interface DocumentExtractorProps {
   fileUrl: string;
@@ -19,6 +20,7 @@ export function DocumentExtractor({
   fileType,
   onExtracted
 }: DocumentExtractorProps) {
+  const { toast } = useToast();
   const { 
     extractedText, 
     setExtractedText, 
@@ -39,8 +41,17 @@ export function DocumentExtractor({
       // Only pass the first argument here since we don't have humanized text yet
       onExtracted(text);
       
-      // After extraction, automatically humanize the text
-      await handleHumanizeText(text);
+      // After extraction, check if text is long enough for humanization
+      if (text.length >= 50) {
+        // Automatically humanize the text
+        await handleHumanizeText(text);
+      } else {
+        toast({
+          title: "Text too short",
+          description: "Extracted text is less than 50 characters and cannot be humanized. Please add more content.",
+          variant: "destructive",
+        });
+      }
     }
   };
 

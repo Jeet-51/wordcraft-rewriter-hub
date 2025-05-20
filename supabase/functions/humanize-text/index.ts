@@ -7,6 +7,11 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Maximum number of polling attempts
+const MAX_POLLING_ATTEMPTS = 20;
+// Polling interval in milliseconds
+const POLLING_INTERVAL = 5000;
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -21,36 +26,72 @@ serve(async (req) => {
       throw new Error("Text parameter is required and must be a string");
     }
 
+    if (text.length < 50) {
+      throw new Error("Text must be at least 50 characters long");
+    }
+
     // Get the Humanizer API key from environment variables
     const humanizationApiKey = Deno.env.get('HUMANIZER_API_KEY');
     let humanizedText = "";
 
     if (humanizationApiKey) {
-      console.log("Using Humanizer API for content transformation");
+      console.log("Using Undetectable AI Humanizer API v2 for content transformation");
       try {
-        // Call the Humanizer API with the text
-        const response = await fetch("https://humanize.undetectable.ai/docs", {
+        // Step 1: Submit the text to the Humanizer API
+        const submitResponse = await fetch("https://humanize.undetectable.ai/submit", {
           method: "POST",
           headers: {
-            "Authorization": `Bearer ${humanizationApiKey}`,
+            "apikey": humanizationApiKey,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            text: text,
-            tone: "natural",
-            fluency: "high",
-            creativity: "medium"
+            content: text,
+            readability: "University",
+            purpose: "General Writing",
+            strength: "More Human",
+            model: "v11"
           }),
         });
 
-        const data = await response.json();
+        const submitData = await submitResponse.json();
         
-        if (data && data.humanizedText) {
-          humanizedText = data.humanizedText;
-        } else if (data && data.error) {
-          throw new Error(`API Error: ${data.error}`);
-        } else {
-          throw new Error("Failed to get valid response from Humanizer API");
+        if (!submitData || !submitData.id) {
+          throw new Error("Failed to submit text to Humanizer API");
+        }
+
+        const documentId = submitData.id;
+        console.log(`Document submitted successfully. ID: ${documentId}`);
+
+        // Step 2: Poll for the humanized text
+        let attempts = 0;
+        let documentData = null;
+        
+        while (attempts < MAX_POLLING_ATTEMPTS) {
+          console.log(`Polling attempt ${attempts + 1}/${MAX_POLLING_ATTEMPTS}`);
+          
+          const pollResponse = await fetch(`https://humanize.undetectable.ai/document?id=${documentId}`, {
+            method: "GET",
+            headers: {
+              "apikey": humanizationApiKey,
+              "Content-Type": "application/json",
+            },
+          });
+
+          documentData = await pollResponse.json();
+          
+          if (documentData && documentData.output) {
+            console.log("Document processing complete");
+            humanizedText = documentData.output;
+            break;
+          }
+          
+          // Wait before next polling attempt
+          await new Promise(resolve => setTimeout(resolve, POLLING_INTERVAL));
+          attempts++;
+        }
+
+        if (!humanizedText) {
+          throw new Error("Document processing timed out or returned null");
         }
       } catch (apiError) {
         console.error("Humanizer API error:", apiError);
@@ -59,7 +100,7 @@ serve(async (req) => {
         humanizedText = localHumanize(text);
       }
     } else {
-      console.log("Using local humanization method");
+      console.log("API key not found. Using local humanization method");
       humanizedText = localHumanize(text);
     }
 

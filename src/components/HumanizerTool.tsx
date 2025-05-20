@@ -53,6 +53,15 @@ export function HumanizerTool({ initialText = "", initialHumanizedText = "" }: H
       });
       return;
     }
+    
+    if (inputText.length < 50) {
+      toast({
+        title: "Text too short",
+        description: "Text must be at least 50 characters long for effective humanization.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     if (!user) {
       toast({
@@ -94,7 +103,7 @@ export function HumanizerTool({ initialText = "", initialHumanizedText = "" }: H
           </Button>
         </div>
         <Textarea
-          placeholder="Paste your AI-generated text here..."
+          placeholder="Paste your AI-generated text here (minimum 50 characters)..."
           className="h-64 resize-none rounded-xl border-muted shadow-sm transition-all focus-visible:ring-2 focus-visible:ring-primary/50"
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
@@ -102,7 +111,7 @@ export function HumanizerTool({ initialText = "", initialHumanizedText = "" }: H
         <div className="flex justify-end">
           <Button 
             onClick={handleHumanize} 
-            disabled={isHumanizing || !inputText.trim()}
+            disabled={isHumanizing || !inputText.trim() || inputText.length < 50}
             className="rounded-full shadow-button px-6"
           >
             {isHumanizing ? (
@@ -115,6 +124,11 @@ export function HumanizerTool({ initialText = "", initialHumanizedText = "" }: H
             )}
           </Button>
         </div>
+        {inputText.length > 0 && inputText.length < 50 && (
+          <p className="text-sm text-destructive">
+            Text must be at least 50 characters long ({inputText.length}/50)
+          </p>
+        )}
       </div>
       <div className="space-y-4">
         <div className="flex items-center justify-between">
@@ -137,6 +151,16 @@ export function HumanizerTool({ initialText = "", initialHumanizedText = "" }: H
         <div className="border rounded-xl p-6 h-64 overflow-auto bg-white/50 shadow-sm">
           {outputText ? (
             <p className="whitespace-pre-wrap text-left">{outputText}</p>
+          ) : isHumanizing ? (
+            <div className="flex flex-col items-center justify-center h-full">
+              <Loader className="h-8 w-8 animate-spin mb-4 text-primary" />
+              <p className="text-muted-foreground text-center">
+                Processing your text with Undetectable AI...
+              </p>
+              <p className="text-sm text-muted-foreground text-center mt-2">
+                This may take up to 60 seconds
+              </p>
+            </div>
           ) : (
             <div className="flex items-center justify-center h-full">
               <p className="text-muted-foreground text-center">
