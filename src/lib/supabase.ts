@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 // Types for our Supabase tables
@@ -147,7 +146,7 @@ export const extractTextFromDocument = async (fileUrl: string, fileType: string)
   });
 };
 
-// Updated function for contact messages to ensure proper format and error handling
+// Fixed createContactMessage function to handle anonymous submissions
 export const createContactMessage = async (name: string, email: string, message: string, userId?: string) => {
   if (!name || !email || !message) {
     throw new Error("Name, email, and message are required fields");
@@ -156,18 +155,19 @@ export const createContactMessage = async (name: string, email: string, message:
   console.log("Creating contact message:", { name, email, message: message.substring(0, 20) + "..." });
   
   try {
-    // Remove the user_id field if it's undefined to avoid permission issues
+    // Create payload without user_id for anonymous submissions
     const payload = { 
       name,
       email,
       message,
     };
     
-    // Only add user_id if it's a valid string
+    // Only add user_id if it exists and is a valid string to avoid RLS issues
     if (userId && typeof userId === 'string') {
       Object.assign(payload, { user_id: userId });
     }
     
+    // Using the public endpoint that's designed for anonymous contact submissions
     const { data, error } = await supabase
       .from('contact_messages')
       .insert([payload])

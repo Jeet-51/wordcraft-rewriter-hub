@@ -52,7 +52,8 @@ const Contact = () => {
       console.log("Submitting form with data:", data);
       
       // Pass the user ID only if user is logged in and has an ID
-      const userId = user?.id || undefined;
+      // We'll make this optional for the function
+      const userId = user?.id;
       
       await createContactMessage(
         data.name,
