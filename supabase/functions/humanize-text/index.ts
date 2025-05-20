@@ -29,9 +29,10 @@ serve(async (req) => {
     }
 
     console.log("Making request to Undetectable.AI API");
+    console.log("API endpoint: https://api.undetectable.ai/api/v2/humanize");
 
-    // Make the API call to Undetectable.AI
-    const response = await fetch("https://api.undetectable.ai/v2/humanize", {
+    // Make the API call to Undetectable.AI with the CORRECT endpoint URL
+    const response = await fetch("https://api.undetectable.ai/api/v2/humanize", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
