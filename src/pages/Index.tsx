@@ -59,15 +59,16 @@ const Index = () => {
             >
               <div className="w-full rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-all">
                 <div className="w-full h-[300px] bg-gray-100 relative">
-                    <img
-                      src="https://source.unsplash.com/600x400/?ai,text,technology"
-                      alt="AI text humanization"
-                      className="absolute inset-0 object-cover w-full h-full rounded-md"
-                      loading="eager"
-                    />
-                  </div>
+                  <img
+                    src="https://cdn.pixabay.com/photo/2023/03/16/09/39/ai-generated-7856706_1280.jpg"
+                    alt="AI text humanization"
+                    className="absolute inset-0 object-cover w-full h-full rounded-md"
+                    loading="eager"
+                  />
+                </div>
               </div>
             </motion.div>
+
           </div>
         </div>
       </section>
