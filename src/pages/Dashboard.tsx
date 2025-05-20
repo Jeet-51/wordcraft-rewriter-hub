@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -8,6 +9,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { HumanizerTool } from "@/components/HumanizerTool";
 import { DocumentExtractor } from "@/components/DocumentExtractor"; 
 import { useToast } from "@/hooks/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle
+} from "@/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { 
   getProfile, 
   getHumanizations, 
@@ -22,8 +31,10 @@ const Dashboard = () => {
   const [activeTab, setActiveTab] = useState("humanizer");
   const [profile, setProfile] = useState<Profile | null>(null);
   const [humanizations, setHumanizations] = useState<Humanization[]>([]);
+  const [displayedHumanizations, setDisplayedHumanizations] = useState<Humanization[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [uploadedDocument, setUploadedDocument] = useState<{
     url: string;
     name: string;
@@ -31,6 +42,10 @@ const Dashboard = () => {
   } | null>(null);
   const [extractedText, setExtractedText] = useState("");
   const [humanizedText, setHumanizedText] = useState("");
+  const [selectedDocument, setSelectedDocument] = useState<Humanization | null>(null);
+  const [isDocumentDialogOpen, setIsDocumentDialogOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
   useEffect(() => {
     const loadUserData = async () => {
@@ -46,6 +61,9 @@ const Dashboard = () => {
         // Load user's humanization history
         const humanizationData = await getHumanizations(user.id);
         setHumanizations(humanizationData);
+        
+        // Set initial displayed items
+        setDisplayedHumanizations(humanizationData.slice(0, itemsPerPage));
       } catch (error) {
         console.error("Error loading user data:", error);
         toast({
@@ -138,6 +156,34 @@ const Dashboard = () => {
       // If only original text is provided (backward compatibility)
       setActiveTab("humanizer");
     }
+  };
+  
+  const handleLoadMore = () => {
+    setIsLoadingMore(true);
+    
+    // Calculate next page of items
+    const nextPage = currentPage + 1;
+    const startIndex = 0;
+    const endIndex = nextPage * itemsPerPage;
+    
+    // Update displayed items with more content
+    setDisplayedHumanizations(humanizations.slice(startIndex, endIndex));
+    setCurrentPage(nextPage);
+    
+    setIsLoadingMore(false);
+    
+    // Scroll to the newly loaded content
+    setTimeout(() => {
+      const element = document.getElementById('history-items-end');
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      }
+    }, 100);
+  };
+  
+  const handleViewDocument = (item: Humanization) => {
+    setSelectedDocument(item);
+    setIsDocumentDialogOpen(true);
   };
   
   if (!user) {
@@ -304,7 +350,11 @@ const Dashboard = () => {
                                     {new Date(item.created_at || '').toLocaleDateString()}
                                   </p>
                                 </div>
-                                <Button variant="ghost" size="sm">
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm"
+                                  onClick={() => handleViewDocument(item)}
+                                >
                                   View
                                 </Button>
                               </div>
@@ -333,7 +383,7 @@ const Dashboard = () => {
                 <CardContent>
                   {humanizations.length > 0 ? (
                     <div className="space-y-4">
-                      {humanizations.map((item) => (
+                      {displayedHumanizations.map((item) => (
                         <div key={item.id} className="rounded-lg border p-4">
                           <div className="text-sm text-muted-foreground mb-1">
                             {new Date(item.created_at || '').toLocaleString()}
@@ -356,9 +406,17 @@ const Dashboard = () => {
                           </div>
                         </div>
                       ))}
-                      <Button variant="outline" className="w-full">
-                        Load More
-                      </Button>
+                      <div id="history-items-end"></div>
+                      {displayedHumanizations.length < humanizations.length && (
+                        <Button 
+                          variant="outline" 
+                          className="w-full"
+                          onClick={handleLoadMore}
+                          disabled={isLoadingMore}
+                        >
+                          {isLoadingMore ? "Loading..." : "Load More"}
+                        </Button>
+                      )}
                     </div>
                   ) : (
                     <div className="text-center py-8">
@@ -380,6 +438,43 @@ const Dashboard = () => {
           </div>
         </Tabs>
       </div>
+      
+      {/* Document Viewing Dialog */}
+      <Dialog open={isDocumentDialogOpen} onOpenChange={setIsDocumentDialogOpen}>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Document Details</DialogTitle>
+            <DialogDescription>
+              Created on {selectedDocument && new Date(selectedDocument.created_at || '').toLocaleString()}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 max-h-[60vh] overflow-y-auto p-1">
+            <div className="space-y-2">
+              <h3 className="text-sm font-medium">Original Text</h3>
+              <div className="rounded-md bg-muted p-4">
+                <p className="text-sm whitespace-pre-wrap">{selectedDocument?.original_text}</p>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <h3 className="text-sm font-medium">Humanized Text</h3>
+              <div className="rounded-md bg-muted p-4">
+                <p className="text-sm whitespace-pre-wrap">{selectedDocument?.humanized_text}</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex justify-end">
+            <Button 
+              variant="outline" 
+              onClick={() => setIsDocumentDialogOpen(false)}
+            >
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
