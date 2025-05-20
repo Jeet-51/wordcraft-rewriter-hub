@@ -58,14 +58,14 @@ const Index = () => {
               className="flex items-center justify-center"
             >
               <div className="w-full rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-all">
-                <AspectRatio ratio={3/2} className="bg-gray-100">
-                  <img
-                    src="https://images.unsplash.com/photo-1655635949212-1d8f4f103ea4?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&h=400&q=80"
-                    alt="AI text humanization"
-                    className="object-cover w-full h-full"
-                    loading="eager"
-                  />
-                </AspectRatio>
+                <div className="w-full h-[300px] bg-gray-100 relative">
+                    <img
+                      src="https://source.unsplash.com/600x400/?ai,text,technology"
+                      alt="AI text humanization"
+                      className="absolute inset-0 object-cover w-full h-full rounded-md"
+                      loading="eager"
+                    />
+                  </div>
               </div>
             </motion.div>
           </div>
