@@ -59,11 +59,11 @@ const Index = () => {
               <img
                 src="https://images.unsplash.com/photo-1655635949212-1d8f4f103ea4?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&h=400&q=80"
                 alt="AI text humanization"
-                className="rounded-lg object-cover shadow-lg hover:shadow-xl transition-all"
+                className="rounded-lg object-cover shadow-lg hover:shadow-xl transition-all w-full h-auto"
                 width={600}
                 height={400}
               />
-            </motion.div>
+            </div>
           </div>
         </div>
       </section>
@@ -168,7 +168,13 @@ const Index = () => {
               >
                 <div className="flex flex-col space-y-4">
                   <div className="flex items-center space-x-4">
-                    <div className="rounded-full bg-gray-200 w-10 h-10" />
+                    <div className="rounded-full bg-gray-200 w-10 h-10 overflow-hidden">
+                      <img 
+                        src={testimonial.avatar} 
+                        alt={testimonial.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
                     <div>
                       <p className="text-sm font-medium">{testimonial.name}</p>
                       <p className="text-xs text-gray-500">{testimonial.role}</p>
@@ -241,7 +247,7 @@ const Index = () => {
                 </Button>
               </Link>
               <Link to="/pricing">
-                <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10 font-medium">
+                <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/20 font-medium">
                   View Pricing
                 </Button>
               </Link>
@@ -384,25 +390,28 @@ const features = [
   }
 ];
 
-// Testimonial data
+// Testimonial data with avatar URLs
 const testimonials = [
   {
     name: "Sarah J.",
     role: "Content Marketer",
     stars: 5,
-    text: "This tool has saved me so much time. I can quickly humanize AI-generated drafts before submitting them to clients."
+    text: "This tool has saved me so much time. I can quickly humanize AI-generated drafts before submitting them to clients.",
+    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=256&q=80"
   },
   {
     name: "Michael T.",
     role: "Freelance Writer",
     stars: 5,
-    text: "I was skeptical at first, but the humanized output is genuinely impressive. It keeps the meaning while sounding much more natural."
+    text: "I was skeptical at first, but the humanized output is genuinely impressive. It keeps the meaning while sounding much more natural.",
+    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=256&q=80"
   },
   {
     name: "Elena K.",
     role: "SEO Specialist",
     stars: 4,
-    text: "The file upload feature makes it easy to process entire blog posts at once, and the results consistently pass AI content checkers."
+    text: "The file upload feature makes it easy to process entire blog posts at once, and the results consistently pass AI content checkers.",
+    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=256&q=80"
   }
 ];
 
