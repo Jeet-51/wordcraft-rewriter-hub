@@ -58,17 +58,16 @@ const Index = () => {
               className="flex items-center justify-center"
             >
               <div className="w-full rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-all">
-                <div className="w-full h-[300px] bg-gray-100 relative">
+                <AspectRatio ratio={3/2} className="bg-gray-100">
                   <img
-                    src="https://cdn.pixabay.com/photo/2023/03/16/09/39/ai-generated-7856706_1280.jpg"
+                    src="https://images.unsplash.com/photo-1655635949212-1d8f4f103ea4?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&h=400&q=80"
                     alt="AI text humanization"
-                    className="absolute inset-0 object-cover w-full h-full rounded-md"
+                    className="object-cover w-full h-full"
                     loading="eager"
                   />
-                </div>
+                </AspectRatio>
               </div>
             </motion.div>
-
           </div>
         </div>
       </section>
