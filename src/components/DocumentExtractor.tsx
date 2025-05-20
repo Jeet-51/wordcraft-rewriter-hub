@@ -7,6 +7,8 @@ import { useToast } from "@/hooks/use-toast";
 import { extractTextFromDocument, createHumanization, getProfile, updateProfile } from "@/lib/supabase";
 import { Loader2, File } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { DocumentHeader } from "./document/DocumentHeader";
+import { TextPreview } from "./document/TextPreview";
 
 interface DocumentExtractorProps {
   fileUrl: string;
@@ -154,52 +156,26 @@ export function DocumentExtractor({
   return (
     <Card className="p-4">
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <File className="mr-2 h-5 w-5 text-primary" />
-            <div>
-              <h3 className="font-medium">{fileName}</h3>
-              <p className="text-sm text-muted-foreground">{fileType.toUpperCase()} document</p>
-            </div>
-          </div>
-          <Button 
-            onClick={handleExtractText}
-            disabled={isExtracting || isHumanizing}
-          >
-            {isExtracting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Extracting...
-              </>
-            ) : isHumanizing ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Humanizing...
-              </>
-            ) : (
-              "Extract & Humanize"
-            )}
-          </Button>
-        </div>
+        <DocumentHeader 
+          fileName={fileName}
+          fileType={fileType}
+          isExtracting={isExtracting}
+          isHumanizing={isHumanizing}
+          onExtract={handleExtractText}
+        />
         
         {extractedText && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <h4 className="text-sm font-medium">Extracted Content:</h4>
-              <Textarea 
-                value={extractedText}
-                onChange={(e) => setExtractedText(e.target.value)}
-                className="h-32"
-              />
-            </div>
-            <div className="space-y-2">
-              <h4 className="text-sm font-medium">Humanized Content:</h4>
-              <Textarea 
-                value={humanizedText}
-                onChange={(e) => setHumanizedText(e.target.value)}
-                className="h-32"
-              />
-            </div>
+            <TextPreview 
+              title="Extracted Content:" 
+              text={extractedText} 
+              onChange={setExtractedText} 
+            />
+            <TextPreview 
+              title="Humanized Content:" 
+              text={humanizedText} 
+              onChange={setHumanizedText} 
+            />
           </div>
         )}
       </div>
