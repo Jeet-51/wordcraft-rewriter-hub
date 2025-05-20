@@ -1,9 +1,9 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-// Get Supabase credentials from environment variables
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+// Get Supabase credentials from environment variables or use placeholder values for development
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://placeholder-supabase-url.supabase.co';
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder-anon-key';
 
 // Initialize the Supabase client
 export const supabase = createClient(supabaseUrl, supabaseKey);
@@ -29,6 +29,19 @@ export type Humanization = {
 
 // Helper functions to interact with Supabase
 export const getProfile = async (userId: string) => {
+  // For development when Supabase isn't fully connected, return mock data
+  if (supabaseUrl.includes('placeholder')) {
+    return {
+      id: userId,
+      username: 'testuser',
+      credits_total: 10,
+      credits_used: 2,
+      plan: 'free',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    } as Profile;
+  }
+
   const { data, error } = await supabase
     .from('profiles')
     .select('*')
@@ -40,6 +53,20 @@ export const getProfile = async (userId: string) => {
 };
 
 export const updateProfile = async (userId: string, updates: Partial<Profile>) => {
+  // For development when Supabase isn't fully connected, return mock data
+  if (supabaseUrl.includes('placeholder')) {
+    return {
+      ...updates,
+      id: userId,
+      username: updates.username || 'testuser',
+      credits_total: updates.credits_total || 10,
+      credits_used: updates.credits_used || 0,
+      plan: updates.plan || 'free',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    } as Profile;
+  }
+
   const { data, error } = await supabase
     .from('profiles')
     .update(updates)
@@ -51,6 +78,17 @@ export const updateProfile = async (userId: string, updates: Partial<Profile>) =
 };
 
 export const createHumanization = async (userId: string, originalText: string, humanizedText: string) => {
+  // For development when Supabase isn't fully connected, return mock data
+  if (supabaseUrl.includes('placeholder')) {
+    return {
+      id: `mock-${Date.now()}`,
+      user_id: userId,
+      original_text: originalText,
+      humanized_text: humanizedText,
+      created_at: new Date().toISOString(),
+    } as Humanization;
+  }
+
   const { data, error } = await supabase
     .from('humanizations')
     .insert([
@@ -63,6 +101,26 @@ export const createHumanization = async (userId: string, originalText: string, h
 };
 
 export const getHumanizations = async (userId: string) => {
+  // For development when Supabase isn't fully connected, return mock data
+  if (supabaseUrl.includes('placeholder')) {
+    return [
+      {
+        id: 'mock-1',
+        user_id: userId,
+        original_text: 'This is an AI-generated text example.',
+        humanized_text: 'This is how a human might write the same thing.',
+        created_at: new Date().toISOString(),
+      },
+      {
+        id: 'mock-2',
+        user_id: userId,
+        original_text: 'Another example of machine-generated content.',
+        humanized_text: 'Here\'s a more natural-sounding version.',
+        created_at: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
+      }
+    ] as Humanization[];
+  }
+
   const { data, error } = await supabase
     .from('humanizations')
     .select('*')
@@ -74,6 +132,11 @@ export const getHumanizations = async (userId: string) => {
 };
 
 export const uploadDocument = async (userId: string, file: File) => {
+  // For development when Supabase isn't fully connected, return mock URL
+  if (supabaseUrl.includes('placeholder')) {
+    return `https://mock-storage.com/${userId}/${file.name}`;
+  }
+  
   const fileExt = file.name.split('.').pop();
   const fileName = `${userId}/${Math.random().toString(36).substring(2)}.${fileExt}`;
   
