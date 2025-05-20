@@ -1,4 +1,3 @@
-
 import { HumanizerTool } from "@/components/HumanizerTool";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
@@ -57,15 +56,13 @@ const Index = () => {
               transition={{ duration: 0.5, delay: 0.3 }}
               className="flex items-center justify-center"
             >
-              <div className="w-full rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-all">
-                <AspectRatio ratio={3/2} className="bg-gray-100">
-                  <img
-                    src="https://images.unsplash.com/photo-1655635949212-1d8f4f103ea4?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&h=400&q=80"
-                    alt="AI text humanization"
-                    className="object-cover w-full h-full"
-                    loading="eager"
-                  />
-                </AspectRatio>
+              <div className="w-full bg-white rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-all">
+                <img
+                  src="https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d"
+                  alt="Person working on AI text humanization"
+                  className="w-full h-auto object-cover rounded-lg"
+                  loading="eager"
+                />
               </div>
             </motion.div>
           </div>
@@ -177,7 +174,8 @@ const Index = () => {
                         src={testimonial.avatar} 
                         alt={testimonial.name}
                         className="w-full h-full object-cover"
-                        loading="eager"
+                        width={40}
+                        height={40}
                       />
                     </div>
                     <div>
@@ -253,7 +251,7 @@ const Index = () => {
                 </Button>
               </Link>
               <Link to="/pricing">
-                <Button size="lg" variant="secondary" className="px-8 font-medium">
+                <Button size="lg" variant="outline" className="px-8 font-medium bg-transparent border-white text-white hover:bg-white/20">
                   View Pricing
                 </Button>
               </Link>
