@@ -29,7 +29,7 @@ serve(async (req) => {
       console.log("Using Humanizer API for content transformation");
       try {
         // Call the Humanizer API with the text
-        const response = await fetch("https://humanize.undetectable.ai/rehumanize", {
+        const response = await fetch("https://humanize.undetectable.ai/docs", {
           method: "POST",
           headers: {
             "Authorization": `Bearer ${humanizationApiKey}`,
