@@ -51,7 +51,7 @@ serve(async (req) => {
             content: text,
             readability: "standard", // Default to standard readability
             purpose: "general",      // Default to general purpose
-            strength: 0.6           // Medium strength (0.4-0.8 is recommended)
+            strength: "0.75"        // Send strength as a string, increased to 0.75 for more noticeable changes
           })
         });
 
@@ -192,7 +192,7 @@ serve(async (req) => {
   }
 });
 
-// Local text humanization function
+// Local text humanization function with enhanced capabilities
 function localHumanize(text: string): string {
   // Enhanced humanization rules
   return text
@@ -237,16 +237,27 @@ function localHumanize(text: string): string {
     .replace(/\. In addition, /gi, ". Also, ")
     .replace(/\. Therefore, /gi, ". So, ")
     
-    // Add some filler words to simulate more natural speech
+    // Add some filler words to simulate more natural speech patterns
     .replace(/(\. )([A-Z])/g, (_, p1, p2) => {
-      const fillers = ["", " Actually, ", " You know, ", " I mean, ", " So, "];
+      const fillers = ["", " Actually, ", " You know, ", " I mean, ", " So, ", " Honestly, ", " Looking at this, "];
       return p1 + fillers[Math.floor(Math.random() * fillers.length)] + p2;
     })
     
     // Add some variety to the beginning of sentences
     .replace(/^I /gm, () => {
-      const starters = ["I ", "Personally, I ", "To be honest, I "];
+      const starters = ["I ", "Personally, I ", "To be honest, I ", "I really ", "I definitely "];
       return starters[Math.floor(Math.random() * starters.length)];
+    })
+    
+    // Make more significant changes to sentence structure occasionally
+    .replace(/It is (.*) that/gi, () => {
+      const options = ["I think that", "From what I can see,", "It seems", "I believe", "In my opinion,"];
+      return options[Math.floor(Math.random() * options.length)];
+    })
+    
+    // Break up long sentences occasionally
+    .replace(/([^.!?]{60,}), ([^.!?]{40,})[.!?]/gi, (_, p1, p2) => {
+      return `${p1}. ${p2[0].toUpperCase() + p2.slice(1)}.`;
     })
     
     // Correct potential double spaces
