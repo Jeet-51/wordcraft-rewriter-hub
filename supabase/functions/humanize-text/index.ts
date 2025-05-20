@@ -50,8 +50,8 @@ serve(async (req) => {
           body: JSON.stringify({
             content: text,
             readability: "standard", // Default to standard readability
-            purpose: "general",      // Default to general purpose
-            strength: "0.75"        // Send strength as a string, increased to 0.75 for more noticeable changes
+            purpose: "General Writing", // Use correct purpose format from API docs
+            strength: "0.9"         // Maximum strength for noticeable changes
           })
         });
 
