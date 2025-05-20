@@ -7,9 +7,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Valid readability levels for Undetectable AI API
+// Valid readability levels to determine the instruction prompt
 const VALID_READABILITY_LEVELS = ["High School", "University", "Doctorate", "Journalist", "Marketing"];
-// Valid purpose options for Undetectable AI API
+// Valid purpose options to determine the instruction prompt
 const VALID_PURPOSES = ["General Writing", "Academic", "Business", "Creative", "Technical"];
 // Default values
 const DEFAULT_READABILITY = "University";
@@ -54,145 +54,70 @@ serve(async (req) => {
     
     // Validate and set strength (between 0.1 and 0.9)
     const validatedStrength = strength && !isNaN(parseFloat(strength)) && parseFloat(strength) >= 0.1 && parseFloat(strength) <= 0.9
-      ? strength.toString()
-      : DEFAULT_STRENGTH;
+      ? parseFloat(strength)
+      : parseFloat(DEFAULT_STRENGTH);
     
     console.log(`Request parameters: readability=${validatedReadability}, purpose=${validatedPurpose}, strength=${validatedStrength}`);
 
-    // Get the Undetectable AI Humanizer API key from environment variables
-    const humanizerApiKey = Deno.env.get('HUMANIZER_API_KEY');
-    let humanizedText = "";
-
-    if (humanizerApiKey) {
-      console.log("Using Undetectable AI Humanizer API v2 for text transformation");
-      try {
-        // Stage 1: Submit the content to the Humanizer API
-        console.log("Submitting content to Undetectable AI Humanizer API");
-        const submitResponse = await fetch("https://humanize.undetectable.ai/submit", {
-          method: "POST",
-          headers: {
-            "apikey": humanizerApiKey,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            content: text,
-            readability: validatedReadability,
-            purpose: validatedPurpose,
-            strength: validatedStrength
-          })
-        });
-
-        // Check if the submission was successful
-        if (!submitResponse.ok) {
-          const errorBody = await submitResponse.text();
-          console.error(`Humanizer API error (${submitResponse.status}): ${errorBody}`);
-          
-          let errorMessage = `API Error: ${submitResponse.status}`;
-          try {
-            const errorJson = JSON.parse(errorBody);
-            
-            // Check if it's an insufficient credits error
-            if (errorJson.error && errorJson.error.includes("Insufficient credits")) {
-              errorMessage = "Insufficient credits to humanize text. Please upgrade your plan.";
-            } else if (errorJson.error) {
-              errorMessage = errorJson.error;
-            }
-          } catch (e) {
-            // If parsing fails, use the error body as message
-            errorMessage = errorBody || `API Error: ${submitResponse.status}`;
-          }
-          
-          throw new Error(errorMessage);
-        }
-
-        // Parse the response to get the document ID
-        const submissionData = await submitResponse.json();
-        
-        if (!submissionData || !submissionData.id) {
-          console.error("Invalid submission response:", submissionData);
-          throw new Error("Failed to get document ID from Humanizer API");
-        }
-
-        const documentId = submissionData.id;
-        console.log(`Document submitted successfully. ID: ${documentId}`);
-
-        // Stage 2: Poll for the document result
-        const maxAttempts = 20;  // Maximum number of polling attempts
-        const pollInterval = 5000;  // 5 seconds between polls
-        
-        let attempts = 0;
-        let documentData;
-        
-        while (attempts < maxAttempts) {
-          attempts++;
-          
-          console.log(`Polling attempt ${attempts}/${maxAttempts} for document ${documentId}`);
-          
-          // Wait for pollInterval before next attempt (except first attempt)
-          if (attempts > 1) {
-            await new Promise(resolve => setTimeout(resolve, pollInterval));
-          }
-          
-          const documentResponse = await fetch(`https://humanize.undetectable.ai/document/${documentId}`, {
-            method: "GET",
-            headers: {
-              "apikey": humanizerApiKey,
-              "Content-Type": "application/json"
-            }
-          });
-          
-          if (!documentResponse.ok) {
-            console.error(`Error fetching document (${documentResponse.status}): ${await documentResponse.text()}`);
-            
-            // If we got a non-recoverable error (not 429), break the loop
-            if (documentResponse.status !== 429) {
-              throw new Error(`Failed to fetch document: ${documentResponse.status}`);
-            }
-            
-            // For rate limiting, continue polling after delay
-            continue;
-          }
-          
-          documentData = await documentResponse.json();
-          console.log("API response:", JSON.stringify(documentData).substring(0, 200) + "...");
-          
-          // Check if processing is complete (output field is populated)
-          if (documentData && documentData.output) {
-            console.log("Document processing complete");
-            humanizedText = documentData.output;
-            break;
-          }
-          
-          // If still processing, continue polling
-          console.log("Document still processing, will check again...");
-        }
-        
-        // Check if we got a result after all attempts
-        if (!humanizedText) {
-          console.error("Document processing timed out after maximum attempts");
-          throw new Error("Document processing timed out. Please try again later.");
-        }
-        
-        // Ensure the humanized text is actually different from the input
-        if (humanizedText === text) {
-          console.log("Warning: API returned identical text. Using advanced fallback.");
-          humanizedText = advancedHumanize(text);
-        } else {
-          console.log("Successfully humanized text using Undetectable AI");
-        }
-      } catch (apiError) {
-        console.error("Humanizer API error:", apiError);
-        
-        // Fall back to local method if API call fails
-        console.log("Falling back to advanced humanization method");
-        humanizedText = advancedHumanize(text);
-      }
-    } else {
-      console.log("Humanizer API key not found. Using advanced humanization method");
-      humanizedText = advancedHumanize(text);
+    // Get the OpenAI API key from environment variables
+    const openAiApiKey = Deno.env.get('OPENAI_API_KEY');
+    
+    if (!openAiApiKey) {
+      console.error("OpenAI API key not found in environment variables");
+      throw new Error("OpenAI API key not configured. Please contact support.");
     }
 
-    console.log("Successfully humanized text");
+    console.log("Using OpenAI for text humanization");
+
+    // Build a system prompt based on readability and purpose settings
+    const systemPrompt = buildHumanizationPrompt(validatedReadability, validatedPurpose, validatedStrength);
+    
+    // Call the OpenAI API
+    const openAiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${openAiApiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini", // Using a cost-effective model that's good at text generation
+        messages: [
+          {
+            role: "system",
+            content: systemPrompt
+          },
+          {
+            role: "user",
+            content: `Please humanize the following text:\n\n${text}`
+          }
+        ],
+        temperature: validatedStrength * 1.1, // Higher strength = more creative variations
+        max_tokens: 2048
+      })
+    });
+
+    if (!openAiResponse.ok) {
+      const errorBody = await openAiResponse.text();
+      console.error(`OpenAI API error (${openAiResponse.status}): ${errorBody}`);
+      throw new Error(`API Error: ${openAiResponse.status}`);
+    }
+
+    const openAiData = await openAiResponse.json();
+    
+    if (!openAiData.choices || openAiData.choices.length === 0) {
+      console.error("Invalid response from OpenAI:", openAiData);
+      throw new Error("Failed to get humanized text from OpenAI");
+    }
+
+    const humanizedText = openAiData.choices[0].message.content;
+    
+    // Ensure the returned text is actually different and meaningful
+    if (!humanizedText || humanizedText.trim() === text.trim()) {
+      console.log("Warning: OpenAI returned identical or empty text");
+      throw new Error("The humanization service returned an invalid response. Please try again.");
+    }
+
+    console.log("Successfully humanized text using OpenAI");
 
     // Return the humanized text to the client
     return new Response(
@@ -226,210 +151,67 @@ serve(async (req) => {
   }
 });
 
-// Advanced text humanization function with better rewriting logic
-function advancedHumanize(text: string): string {
-  // Break text into paragraphs
-  const paragraphs = text.split(/\n\n+/);
+// Build a customized humanization prompt based on settings
+function buildHumanizationPrompt(readability: string, purpose: string, strength: number): string {
+  let basePrompt = "You are an expert at rewriting AI-generated content to sound natural and human-written. ";
   
-  // Process each paragraph
-  const processedParagraphs = paragraphs.map(paragraph => {
-    // Skip empty paragraphs
-    if (!paragraph.trim()) return paragraph;
-    
-    // Split paragraph into sentences 
-    const sentences = paragraph
-      .replace(/([.!?])\s+/g, "$1|")
-      .split("|")
-      .filter(sentence => sentence.trim().length > 0);
-
-    // Process each sentence with different humanization strategies
-    const processedSentences = sentences.map((sentence, index) => {
-      // Use different strategies based on sentence position and content
-      const strategy = index % 5; // Cycle through 5 different strategies
-      
-      switch (strategy) {
-        case 0:
-          // Strategy 1: Add personal perspective
-          return addPersonalPerspective(sentence);
-        case 1:
-          // Strategy 2: Restructure the sentence
-          return restructureSentence(sentence);
-        case 2:
-          // Strategy 3: Simplify complex phrasing
-          return simplifyComplexPhrasing(sentence);
-        case 3:
-          // Strategy 4: Add transition phrases
-          return addTransitionPhrase(sentence, index, sentences.length);
-        case 4:
-          // Strategy 5: Vary vocabulary
-          return varyVocabulary(sentence);
-        default:
-          return sentence;
-      }
-    });
-    
-    // Join sentences back into paragraph
-    return processedSentences.join(" ");
-  });
-  
-  // Join paragraphs back into text
-  return processedParagraphs.join("\n\n");
-}
-
-// Strategy 1: Adding personal perspective
-function addPersonalPerspective(sentence: string): string {
-  const personalStarters = [
-    { pattern: /^It is /i, replacement: "I think it's " },
-    { pattern: /^There is /i, replacement: "I believe there's " },
-    { pattern: /^This /i, replacement: "In my view, this " },
-    { pattern: /^The data shows /i, replacement: "From what I've seen, the data indicates " },
-    { pattern: /^Research indicates /i, replacement: "Based on research I've read, " }
-  ];
-  
-  let result = sentence;
-  
-  // Apply a random transformation with 40% chance
-  if (Math.random() < 0.4) {
-    for (const { pattern, replacement } of personalStarters) {
-      if (pattern.test(sentence)) {
-        result = sentence.replace(pattern, replacement);
-        break;
-      }
-    }
+  // Add readability level instructions
+  switch (readability) {
+    case "High School":
+      basePrompt += "Write at a high school reading level with simpler vocabulary and shorter sentences. ";
+      break;
+    case "University":
+      basePrompt += "Write at a university reading level with academic but accessible language. ";
+      break;
+    case "Doctorate":
+      basePrompt += "Write at an advanced academic level with sophisticated vocabulary and complex sentence structures. ";
+      break;
+    case "Journalist":
+      basePrompt += "Write in a journalistic style with clear, engaging language that balances formality and accessibility. ";
+      break;
+    case "Marketing":
+      basePrompt += "Write in a persuasive, engaging style that would be effective for marketing content. ";
+      break;
   }
   
-  return result;
-}
-
-// Strategy 2: Restructuring sentences
-function restructureSentence(sentence: string): string {
-  // Only apply to longer sentences
-  if (sentence.length < 40) return sentence;
-  
-  // Examples of restructuring patterns
-  const restructurePatterns = [
-    // If sentence contains "because", flip the cause and effect
-    { 
-      pattern: /^(.+) because (.+)\.$/i, 
-      replacement: (_, effect, cause) => `Because ${cause}, ${effect.toLowerCase()}.` 
-    },
-    // If sentence uses "although", reverse the order
-    { 
-      pattern: /^Although (.+), (.+)\.$/i, 
-      replacement: (_, concession, main) => `${main}. However, ${concession}.` 
-    },
-    // Convert "not only X but also Y" structure
-    { 
-      pattern: /^(.+) not only (.+) but also (.+)\.$/i,
-      replacement: (_, subject, first, second) => `${subject} ${second}. Additionally, ${subject} ${first}.` 
-    }
-  ];
-  
-  // Try to apply a restructuring pattern
-  for (const { pattern, replacement } of restructurePatterns) {
-    if (pattern.test(sentence)) {
-      return sentence.replace(pattern, replacement);
-    }
+  // Add purpose-specific instructions
+  switch (purpose) {
+    case "Academic":
+      basePrompt += "Format text for academic purposes, maintaining a formal tone with proper citations and logical structure. ";
+      break;
+    case "Business":
+      basePrompt += "Format text for business contexts, with clear points, professional tone, and actionable insights. ";
+      break;
+    case "Creative":
+      basePrompt += "Rewrite with a creative flair, using vivid language, varied sentence structures, and engaging style. ";
+      break;
+    case "Technical":
+      basePrompt += "Optimize for technical writing, with precise terminology, clear explanations, and logical organization. ";
+      break;
+    default: // General Writing
+      basePrompt += "Create natural-sounding general content that reads as if written by a human. ";
   }
   
-  return sentence;
-}
-
-// Strategy 3: Simplifying complex phrasing
-function simplifyComplexPhrasing(sentence: string): string {
-  return sentence
-    // Replace complex words with simpler alternatives
-    .replace(/utilize/gi, "use")
-    .replace(/subsequently/gi, "then")
-    .replace(/nevertheless/gi, "however")
-    .replace(/additionally/gi, "also")
-    .replace(/furthermore/gi, "plus")
-    .replace(/commence/gi, "start")
-    .replace(/terminate/gi, "end")
-    .replace(/endeavor/gi, "try")
-    .replace(/attempt to/gi, "try to")
-    .replace(/sufficient/gi, "enough")
-    .replace(/ascertain/gi, "find out")
-    .replace(/in the event that/gi, "if")
-    .replace(/in order to/gi, "to")
-    .replace(/for the purpose of/gi, "for")
-    .replace(/with regard to/gi, "about")
-    .replace(/in reference to/gi, "about")
-    .replace(/in relation to/gi, "about")
-    
-    // Replace overly formal phrases
-    .replace(/it is imperative that/gi, "it's important that")
-    .replace(/as a consequence of/gi, "because of")
-    .replace(/in the absence of/gi, "without")
-    .replace(/in the vicinity of/gi, "near")
-    .replace(/in conjunction with/gi, "with")
-    .replace(/in accordance with/gi, "following")
-    
-    // Add occasional contractions to sound more human
-    .replace(/it is /gi, "it's ")
-    .replace(/that is /gi, "that's ")
-    .replace(/there is /gi, "there's ")
-    .replace(/what is /gi, "what's ")
-    .replace(/who is /gi, "who's ")
-    .replace(/cannot /gi, "can't ")
-    .replace(/do not /gi, "don't ");
-}
-
-// Strategy 4: Adding transition phrases
-function addTransitionPhrase(sentence: string, index: number, totalSentences: number): string {
-  // Skip for first sentence or short sentences
-  if (index === 0 || sentence.length < 30) return sentence;
-  
-  const transitions = [
-    "Actually, ",
-    "Honestly, ",
-    "Interestingly, ",
-    "To be fair, ",
-    "Surprisingly, ",
-    "Of course, ",
-    "Naturally, ",
-    "As you might expect, ",
-    "Looking at this differently, ",
-    "In fact, "
-  ];
-  
-  // Only add transition 30% of the time
-  if (Math.random() < 0.3) {
-    const transition = transitions[Math.floor(Math.random() * transitions.length)];
-    return transition + sentence.charAt(0).toLowerCase() + sentence.slice(1);
+  // Add strength-specific instructions
+  if (strength < 0.3) {
+    basePrompt += "Make minimal changes to the text, focusing only on the most obvious machine patterns. Preserve most of the original text.";
+  } else if (strength < 0.6) {
+    basePrompt += "Make moderate changes to sentence structure and word choice, while preserving the original meaning and key phrases.";
+  } else {
+    basePrompt += "Significantly rewrite the text with substantial changes to sentence structure, word choice, and organization. Make it sound completely human-written.";
   }
   
-  return sentence;
-}
-
-// Strategy 5: Varying vocabulary
-function varyVocabulary(sentence: string): string {
-  const wordSubstitutions = [
-    { pattern: /\bimportant\b/gi, replacements: ["crucial", "vital", "essential", "key"] },
-    { pattern: /\bproblem\b/gi, replacements: ["issue", "challenge", "difficulty", "concern"] },
-    { pattern: /\bgood\b/gi, replacements: ["great", "excellent", "beneficial", "positive"] },
-    { pattern: /\bbad\b/gi, replacements: ["poor", "negative", "problematic", "unfavorable"] },
-    { pattern: /\bquickly\b/gi, replacements: ["rapidly", "swiftly", "promptly", "speedily"] },
-    { pattern: /\bclearly\b/gi, replacements: ["obviously", "evidently", "plainly", "distinctly"] },
-    { pattern: /\bsignificant\b/gi, replacements: ["substantial", "considerable", "notable", "marked"] },
-    { pattern: /\bshow\b/gi, replacements: ["demonstrate", "indicate", "reveal", "display"] },
-    { pattern: /\bthink\b/gi, replacements: ["believe", "consider", "reckon", "feel"] }
-  ];
+  // Instructions for humanization process
+  basePrompt += `
   
-  let result = sentence;
+Follow these specific requirements:
+1. Maintain the original meaning completely
+2. Fix awkward phrasing and robotic patterns
+3. Vary sentence structure and length
+4. Use natural transitions between ideas
+5. Introduce human-like language patterns (idioms, contractions, etc.)
+6. Never add "[" or "]" characters to your response
+7. Return only the humanized text, nothing else`;
   
-  // Apply up to 2 random substitutions
-  const substitutionsToApply = Math.floor(Math.random() * 2) + 1;
-  
-  for (let i = 0; i < substitutionsToApply; i++) {
-    const substitution = wordSubstitutions[Math.floor(Math.random() * wordSubstitutions.length)];
-    
-    if (substitution.pattern.test(result)) {
-      const replacement = substitution.replacements[Math.floor(Math.random() * substitution.replacements.length)];
-      // Only replace the first occurrence to avoid over-substitution
-      result = result.replace(substitution.pattern, replacement);
-    }
-  }
-  
-  return result;
+  return basePrompt;
 }

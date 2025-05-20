@@ -11,9 +11,9 @@ export const HumanizerTab = ({ extractedText, humanizedText }: HumanizerTabProps
   return (
     <Card>
       <CardHeader>
-        <CardTitle>AI Text Humanizer</CardTitle>
+        <CardTitle>AI Text Humanizer (OpenAI)</CardTitle>
         <CardDescription>
-          Transform your AI-generated content to sound human-written
+          Transform your AI-generated content to sound human-written using OpenAI
         </CardDescription>
       </CardHeader>
       <CardContent>

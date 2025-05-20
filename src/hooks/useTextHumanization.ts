@@ -62,10 +62,10 @@ export function useTextHumanization() {
 
       toast({
         title: "Processing",
-        description: "Humanizing your text... This may take up to a minute.",
+        description: "Humanizing your text... This may take a moment.",
       });
 
-      // Call the Supabase Edge Function to humanize the text with options
+      // Call the OpenAI Edge Function to humanize the text with options
       const { data, error } = await supabase.functions.invoke('humanize-text', {
         body: { 
           text: text,
@@ -108,7 +108,7 @@ export function useTextHumanization() {
 
       toast({
         title: "Text humanized",
-        description: "Your text has been successfully humanized.",
+        description: "Your text has been successfully humanized with OpenAI.",
       });
       
       return resultText;
@@ -123,7 +123,7 @@ export function useTextHumanization() {
       } else if (errorMessage.includes("timed out")) {
         errorMessage = "The humanization process took too long. Please try again with a shorter text.";
       } else if (errorMessage.includes("API Error")) {
-        errorMessage = "The Humanizer service is currently unavailable. Please try again later.";
+        errorMessage = "The OpenAI service is currently unavailable. Please try again later.";
       }
       
       toast({
