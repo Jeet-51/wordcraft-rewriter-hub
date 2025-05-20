@@ -41,7 +41,7 @@ export const uploadDocument = async (userId: string, file: File) => {
 
 // Function to extract text from document
 export const extractTextFromDocument = async (fileUrl: string, fileType: string): Promise<string> => {
-  console.log(`Extracting text from document: ${fileUrl}`);
+  console.log(`Extracting text from document: ${fileUrl}, type: ${fileType}`);
   
   try {
     // Download the file content from the URL
@@ -52,120 +52,217 @@ export const extractTextFromDocument = async (fileUrl: string, fileType: string)
     }
     
     let extractedText = '';
+    const arrayBuffer = await response.arrayBuffer();
     
     if (fileType === 'txt') {
       // For TXT files, simply get the text content
-      extractedText = await response.text();
+      const textDecoder = new TextDecoder('utf-8');
+      extractedText = textDecoder.decode(arrayBuffer);
     } 
     else if (fileType === 'pdf') {
-      // For PDF files, using an improved approach for text extraction
-      const arrayBuffer = await response.arrayBuffer();
-      const textDecoder = new TextDecoder('utf-8');
-      const content = textDecoder.decode(arrayBuffer);
+      console.log("Processing PDF file");
+      // Get the binary data
+      const uint8Array = new Uint8Array(arrayBuffer);
       
-      // More sophisticated PDF text extraction
-      // Look for text between stream markers and content delimiters
-      const textBlocks = [];
+      // Look for text objects within the PDF
+      const pdfString = new TextDecoder('utf-8').decode(uint8Array);
       
-      // Try to find text blocks in the PDF content
-      const matches = content.match(/BT\s+(.*?)\s+ET/gs);
-      if (matches) {
-        matches.forEach(match => {
-          // Extract text tokens from each text block
-          const textTokens = match.match(/\((.*?)\)/gs);
-          if (textTokens) {
-            textTokens.forEach(token => {
-              // Clean up and decode PDF text tokens
-              let text = token.substring(1, token.length - 1)
-                .replace(/\\(\d{3})/g, (_, oct) => String.fromCharCode(parseInt(oct, 8)))
-                .replace(/\\n/g, '\n')
-                .replace(/\\r/g, '\r')
-                .replace(/\\\\/g, '\\')
-                .replace(/\\\(/g, '(')
-                .replace(/\\\)/g, ')');
-              
-              textBlocks.push(text);
-            });
-          }
-        });
+      // First approach: Extract content between stream markers using regex
+      console.log("Attempting to extract text from PDF streams");
+      extractedText = extractPdfText(pdfString);
+      
+      if (!extractedText || extractedText.trim().length < 50) {
+        console.log("First extraction method yielded insufficient text, trying alternative approach");
+        extractedText = extractPdfTextAlternative(pdfString);
       }
       
-      if (textBlocks.length > 0) {
-        extractedText = textBlocks.join(' ');
-      } else {
-        // Fallback to the basic extraction if the improved method doesn't work
-        extractedText = content
-          .replace(/^\s*\d+\s*$/gm, '') // Remove page numbers
-          .replace(/[^\x20-\x7E\n]/g, '') // Keep only ASCII printable chars and newlines
-          .replace(/\s{2,}/g, ' ') // Replace multiple spaces with single space
-          .trim();
-      }
+      // Clean up the extracted text
+      extractedText = cleanExtractedText(extractedText);
       
-      // Additional processing to improve readability
-      extractedText = extractedText
-        .replace(/([.!?])\s*(?=[A-Z])/g, '$1\n\n') // Add paragraph breaks after sentences
-        .replace(/([\n\r]+\s*){3,}/g, '\n\n') // Normalize excessive line breaks
-        .trim();
-      
-      // If we still couldn't extract meaningful content, provide a message
-      if (extractedText.length < 100 || !extractedText.match(/[a-zA-Z]{2,}/g)) {
-        extractedText = `This PDF document requires specialized parsing. Some text was extracted but may not be fully readable. For better results, consider uploading a text file.`;
+      if (!extractedText || extractedText.trim().length < 50) {
+        extractedText = "PDF extraction was limited. This document may use complex formatting or be scanned content. For better results, consider using a plain text file.";
       }
     }
     else if (fileType === 'docx') {
-      // For DOCX files, try a basic extraction of text content
-      // DOCX files are ZIP archives with XML files inside
-      const arrayBuffer = await response.arrayBuffer();
-      const bytes = new Uint8Array(arrayBuffer);
+      console.log("Processing DOCX file");
       
-      // Check if the file has the DOCX signature
-      if (bytes[0] === 0x50 && bytes[1] === 0x4B) { // PK signature for ZIP files
-        try {
-          // Look for document.xml content inside the ZIP
-          const textDecoder = new TextDecoder('utf-8');
-          const content = textDecoder.decode(arrayBuffer);
+      try {
+        // For DOCX files, try to extract content from the ZIP structure
+        const zipData = new Uint8Array(arrayBuffer);
+        
+        // Check DOCX signature
+        if (zipData[0] === 0x50 && zipData[1] === 0x4B) {
+          console.log("Valid DOCX (ZIP) signature detected");
           
-          // Try to extract text from XML tags that might contain document content
-          const textMatches = content.match(/<w:t[^>]*>(.*?)<\/w:t>/gs);
+          // Convert the ArrayBuffer to a string
+          const textContent = new TextDecoder('utf-8').decode(zipData);
           
-          if (textMatches && textMatches.length > 0) {
-            // Extract and clean up the text content
-            const extractedParts = textMatches.map(match => {
-              const textContent = match.replace(/<[^>]+>/g, ''); // Remove XML tags
-              return textContent
-                .replace(/&lt;/g, '<')
-                .replace(/&gt;/g, '>')
-                .replace(/&amp;/g, '&')
-                .replace(/&quot;/g, '"')
-                .replace(/&apos;/g, "'");
-            });
-            
-            extractedText = extractedParts.join(' ').trim();
-            
-            // Add paragraph breaks for readability
-            extractedText = extractedText
-              .replace(/([.!?])\s*(?=[A-Z])/g, '$1\n\n')
-              .replace(/([\n\r]+\s*){3,}/g, '\n\n')
-              .trim();
+          // Extract text from XML content parts
+          extractedText = extractDocxText(textContent);
+          
+          if (!extractedText || extractedText.trim().length < 50) {
+            extractedText = "DOCX extraction was limited. This document may use complex formatting. For better results, consider using a plain text file.";
           }
-        } catch (error) {
-          console.error("Error parsing DOCX content:", error);
-          extractedText = `Unable to extract text from this DOCX document. For better results, consider uploading a text file.`;
+        } else {
+          extractedText = "The DOCX file appears to be corrupted or in an unsupported format.";
         }
-      }
-      
-      // If extraction failed or produced minimal content
-      if (!extractedText || extractedText.length < 50) {
-        extractedText = `This appears to be a DOCX document, but text extraction was limited. For better results, consider converting to a TXT file before uploading.`;
+      } catch (err) {
+        console.error("Error parsing DOCX content:", err);
+        extractedText = "Error extracting text from DOCX. For better results, try using a plain text file.";
       }
     }
     else {
-      extractedText = `File type '${fileType}' is not supported for text extraction. Please upload a TXT file for best results.`;
+      extractedText = `File type '${fileType}' is not supported for text extraction. Please upload a TXT, PDF, or DOCX file.`;
     }
     
+    console.log(`Extracted ${extractedText.length} characters from the document`);
     return extractedText || "No text content could be extracted from this document.";
   } catch (error) {
     console.error("Error extracting text from document:", error);
     return `Error extracting text: ${error.message}`;
   }
 };
+
+// Helper functions for PDF extraction
+function extractPdfText(pdfString: string): string {
+  // Look for text between BT (Begin Text) and ET (End Text) markers
+  const textBlocks: string[] = [];
+  const btEtRegex = /BT\s+(.*?)\s+ET/gs;
+  const matches = pdfString.match(btEtRegex);
+  
+  if (matches && matches.length > 0) {
+    matches.forEach(block => {
+      // Extract text within parentheses (text tokens in PDF)
+      const textTokenRegex = /\(([^\)\\]*(?:\\.[^\)\\]*)*)\)/g;
+      let textTokenMatch;
+      
+      while ((textTokenMatch = textTokenRegex.exec(block)) !== null) {
+        if (textTokenMatch[1]) {
+          // Clean up PDF escape sequences
+          let text = textTokenMatch[1]
+            .replace(/\\(\d{3})/g, (_, oct) => String.fromCharCode(parseInt(oct, 8)))
+            .replace(/\\n/g, '\n')
+            .replace(/\\r/g, '\r')
+            .replace(/\\\\/g, '\\')
+            .replace(/\\\(/g, '(')
+            .replace(/\\\)/g, ')');
+            
+          textBlocks.push(text);
+        }
+      }
+    });
+  }
+  
+  return textBlocks.join(' ').trim();
+}
+
+function extractPdfTextAlternative(pdfString: string): string {
+  // Alternative approach looking for text objects without BT/ET markers
+  const textMatches: string[] = [];
+  
+  // Look for TJ array operators which typically contain text strings
+  const tjRegex = /\[((?:\([^\)]*\)|<[^>]*>)[^\]]*)\]\s*TJ/g;
+  let tjMatch;
+  
+  while ((tjMatch = tjRegex.exec(pdfString)) !== null) {
+    if (tjMatch[1]) {
+      // Extract text within parentheses
+      const textParts = tjMatch[1].match(/\(([^\)\\]*(?:\\.[^\)\\]*)*)\)/g);
+      if (textParts) {
+        textMatches.push(...textParts.map(part => 
+          part.substring(1, part.length - 1)
+            .replace(/\\(\d{3})/g, (_, oct) => String.fromCharCode(parseInt(oct, 8)))
+            .replace(/\\n/g, '\n')
+            .replace(/\\r/g, '\r')
+            .replace(/\\\\/g, '\\')
+            .replace(/\\\(/g, '(')
+            .replace(/\\\)/g, ')')
+        ));
+      }
+      
+      // Also check for hex-encoded strings
+      const hexParts = tjMatch[1].match(/<([0-9A-Fa-f]+)>/g);
+      if (hexParts) {
+        textMatches.push(...hexParts.map(part => {
+          const hex = part.substring(1, part.length - 1);
+          let text = '';
+          for (let i = 0; i < hex.length; i += 2) {
+            text += String.fromCharCode(parseInt(hex.substr(i, 2), 16));
+          }
+          return text;
+        }));
+      }
+    }
+  }
+  
+  // Also try to find Tj operators (single text objects)
+  const tjSingleRegex = /\(([^\)\\]*(?:\\.[^\)\\]*)*)\)\s*Tj/g;
+  let tjSingleMatch;
+  
+  while ((tjSingleMatch = tjSingleRegex.exec(pdfString)) !== null) {
+    if (tjSingleMatch[1]) {
+      let text = tjSingleMatch[1]
+        .replace(/\\(\d{3})/g, (_, oct) => String.fromCharCode(parseInt(oct, 8)))
+        .replace(/\\n/g, '\n')
+        .replace(/\\r/g, '\r')
+        .replace(/\\\\/g, '\\')
+        .replace(/\\\(/g, '(')
+        .replace(/\\\)/g, ')');
+        
+      textMatches.push(text);
+    }
+  }
+  
+  return textMatches.join(' ').trim();
+}
+
+// Helper function for DOCX extraction
+function extractDocxText(zipContent: string): string {
+  const texts: string[] = [];
+  
+  // Look for text content in word/document.xml
+  const contentRegex = /<w:t[^>]*>([^<]*)<\/w:t>/g;
+  let contentMatch;
+  
+  while ((contentMatch = contentRegex.exec(zipContent)) !== null) {
+    if (contentMatch[1]) {
+      texts.push(contentMatch[1]);
+    }
+  }
+  
+  // Special case for paragraph breaks
+  const paragraphBreaks = zipContent.match(/<w:p[^>]*>/g);
+  if (paragraphBreaks && texts.length > 0) {
+    // Add paragraph breaks where appropriate
+    let result = '';
+    let textIndex = 0;
+    let paragraphCount = 0;
+    
+    for (let i = 0; i < texts.length; i++) {
+      if (paragraphCount < paragraphBreaks.length && 
+          zipContent.indexOf(paragraphBreaks[paragraphCount]) < 
+          zipContent.indexOf(texts[i], textIndex)) {
+        result += '\n';
+        paragraphCount++;
+      }
+      result += texts[i] + ' ';
+      textIndex = zipContent.indexOf(texts[i], textIndex) + texts[i].length;
+    }
+    
+    return result.trim();
+  }
+  
+  return texts.join(' ').trim();
+}
+
+// Clean up the extracted text to improve readability
+function cleanExtractedText(text: string): string {
+  if (!text) return text;
+  
+  return text
+    .replace(/\s{2,}/g, ' ') // Replace multiple spaces with a single space
+    .replace(/([.!?])\s*(?=[A-Z])/g, '$1\n\n') // Add paragraph breaks after sentences
+    .replace(/([\n\r]+\s*){3,}/g, '\n\n') // Normalize excessive line breaks
+    .replace(/[^\x20-\x7E\n]/g, '') // Remove non-printable characters
+    .trim();
+}
