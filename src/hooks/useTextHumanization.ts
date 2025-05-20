@@ -65,11 +65,14 @@ export function useTextHumanization() {
       });
 
       if (error) {
+        console.error("Edge function error:", error);
         throw new Error(error.message || "Failed to humanize text");
       }
 
-      if (!data.success) {
-        throw new Error(data.error || "Failed to humanize text");
+      if (!data || !data.success) {
+        const errorMessage = data?.error || "Failed to humanize text";
+        console.error("Humanization failed:", errorMessage);
+        throw new Error(errorMessage);
       }
 
       // Ensure the returned text is actually different from the input

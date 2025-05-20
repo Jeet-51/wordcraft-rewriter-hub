@@ -73,6 +73,9 @@ export function HumanizerTool({ initialText = "", initialHumanizedText = "" }: H
     }
 
     try {
+      // Clear previous output when starting new humanization
+      setOutputText("");
+      
       const result = await humanizeContent(inputText);
       if (result) {
         setOutputText(result);

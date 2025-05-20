@@ -43,6 +43,12 @@ export function DocumentExtractor({
       
       // After extraction, check if text is long enough for humanization
       if (text.length >= 50) {
+        // Show toast about automatic humanization
+        toast({
+          title: "Starting humanization",
+          description: "Automatically humanizing the extracted text. This may take up to a minute.",
+        });
+        
         // Automatically humanize the text
         await handleHumanizeText(text);
       } else {
@@ -56,10 +62,19 @@ export function DocumentExtractor({
   };
 
   const handleHumanizeText = async (text: string) => {
-    const humanized = await humanizeContent(text);
-    if (humanized) {
-      // Send back both original and humanized text
-      onExtracted(text, humanized);
+    try {
+      const humanized = await humanizeContent(text);
+      if (humanized) {
+        // Send back both original and humanized text
+        onExtracted(text, humanized);
+      }
+    } catch (error) {
+      console.error("Error in handleHumanizeText:", error);
+      toast({
+        title: "Humanization failed",
+        description: "Could not humanize the text. Please try again or check the logs for details.",
+        variant: "destructive",
+      });
     }
   };
 

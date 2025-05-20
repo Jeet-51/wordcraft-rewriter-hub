@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 
@@ -19,8 +18,16 @@ serve(async (req) => {
   }
 
   try {
+    let requestBody;
+    try {
+      requestBody = await req.json();
+    } catch (parseError) {
+      console.error("Error parsing request body:", parseError);
+      throw new Error("Invalid request body format. Expected JSON.");
+    }
+
     // Get the original text from the request
-    const { text } = await req.json();
+    const { text } = requestBody;
     
     if (!text || typeof text !== "string") {
       throw new Error("Text parameter is required and must be a string");
@@ -38,25 +45,62 @@ serve(async (req) => {
       console.log("Using Undetectable AI Humanizer API v2 for content transformation");
       try {
         // Step 1: Submit the text to the Humanizer API
+        const payload = {
+          content: text,
+          readability: "University",
+          purpose: "General Writing",
+          strength: "More Human",
+          model: "v11"
+        };
+
+        console.log("Sending request to Humanizer API /submit endpoint");
+        
         const submitResponse = await fetch("https://humanize.undetectable.ai/submit", {
           method: "POST",
           headers: {
             "apikey": humanizationApiKey,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            content: text,
-            readability: "University",
-            purpose: "General Writing",
-            strength: "More Human",
-            model: "v11"
-          }),
+          body: JSON.stringify(payload),
         });
 
-        const submitData = await submitResponse.json();
+        // Check HTTP status code first
+        if (!submitResponse.ok) {
+          const statusText = submitResponse.statusText;
+          let errorDetail;
+          
+          try {
+            const errorBody = await submitResponse.text();
+            console.error(`Submit endpoint error response body: ${errorBody}`);
+            
+            try {
+              // Try to parse as JSON if possible
+              errorDetail = JSON.parse(errorBody);
+            } catch {
+              // Otherwise use as text
+              errorDetail = errorBody;
+            }
+          } catch (e) {
+            errorDetail = "Unable to read error response";
+          }
+          
+          throw new Error(`Submit API failed with status ${submitResponse.status}: ${statusText}. Details: ${JSON.stringify(errorDetail)}`);
+        }
+
+        // Parse response as JSON
+        let submitData;
+        try {
+          submitData = await submitResponse.json();
+        } catch (jsonError) {
+          console.error("Error parsing submit response:", jsonError);
+          const responseText = await submitResponse.text();
+          console.error(`Raw submit response: ${responseText}`);
+          throw new Error("Invalid JSON response from submit endpoint");
+        }
         
         if (!submitData || !submitData.id) {
-          throw new Error("Failed to submit text to Humanizer API");
+          console.error("Submit response data:", submitData);
+          throw new Error("Failed to get document ID from Humanizer API");
         }
 
         const documentId = submitData.id;
@@ -77,9 +121,41 @@ serve(async (req) => {
             },
           });
 
-          documentData = await pollResponse.json();
+          // Check HTTP status code first
+          if (!pollResponse.ok) {
+            const statusText = pollResponse.statusText;
+            console.error(`Poll endpoint error: ${pollResponse.status} ${statusText}`);
+            
+            try {
+              const errorBody = await pollResponse.text();
+              console.error(`Poll endpoint error response body: ${errorBody}`);
+            } catch (e) {
+              console.error("Unable to read poll error response");
+            }
+            
+            // Continue polling despite errors - don't throw yet
+            await new Promise(resolve => setTimeout(resolve, POLLING_INTERVAL));
+            attempts++;
+            continue;
+          }
+
+          // Parse response as JSON
+          try {
+            documentData = await pollResponse.json();
+            console.log("Poll response data:", JSON.stringify(documentData));
+          } catch (jsonError) {
+            console.error("Error parsing poll response:", jsonError);
+            const responseText = await pollResponse.text();
+            console.error(`Raw poll response: ${responseText}`);
+            
+            // Continue polling despite parsing errors
+            await new Promise(resolve => setTimeout(resolve, POLLING_INTERVAL));
+            attempts++;
+            continue;
+          }
           
-          if (documentData && documentData.output) {
+          // Check if processing is complete and output is available
+          if (documentData && documentData.status === 'complete' && documentData.output) {
             console.log("Document processing complete");
             humanizedText = documentData.output;
             break;
@@ -91,6 +167,7 @@ serve(async (req) => {
         }
 
         if (!humanizedText) {
+          console.error("Document processing timed out or returned null");
           throw new Error("Document processing timed out or returned null");
         }
       } catch (apiError) {
