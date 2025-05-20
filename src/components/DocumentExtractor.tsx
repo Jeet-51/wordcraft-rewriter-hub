@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { extractTextFromDocument, createHumanization, getProfile, updateProfile } from "@/lib/supabase";
-import { Loader2 } from "lucide-react";
+import { Loader2, File } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
 interface DocumentExtractorProps {
@@ -155,9 +155,12 @@ export function DocumentExtractor({
     <Card className="p-4">
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <div>
-            <h3 className="font-medium">{fileName}</h3>
-            <p className="text-sm text-muted-foreground">{fileType} document</p>
+          <div className="flex items-center">
+            <File className="mr-2 h-5 w-5 text-primary" />
+            <div>
+              <h3 className="font-medium">{fileName}</h3>
+              <p className="text-sm text-muted-foreground">{fileType.toUpperCase()} document</p>
+            </div>
           </div>
           <Button 
             onClick={handleExtractText}
