@@ -31,6 +31,7 @@ const Dashboard = () => {
     type: string;
   } | null>(null);
   const [extractedText, setExtractedText] = useState("");
+  const [humanizedText, setHumanizedText] = useState("");
 
   useEffect(() => {
     const loadUserData = async () => {
@@ -127,10 +128,17 @@ const Dashboard = () => {
     }
   };
 
-  const handleExtractedText = (text: string) => {
-    setExtractedText(text);
-    // Switch to humanizer tab with the extracted text
-    setActiveTab("humanizer");
+  const handleExtractedText = (originalText: string, humanized?: string) => {
+    setExtractedText(originalText);
+    
+    // If humanized text is provided, set it and switch to humanizer tab
+    if (humanized) {
+      setHumanizedText(humanized);
+      setActiveTab("humanizer");
+    } else {
+      // If only original text is provided (backward compatibility)
+      setActiveTab("humanizer");
+    }
   };
   
   if (!user) {
@@ -209,7 +217,10 @@ const Dashboard = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <HumanizerTool initialText={extractedText} />
+                  <HumanizerTool 
+                    initialText={extractedText} 
+                    initialHumanizedText={humanizedText}
+                  />
                 </CardContent>
               </Card>
             </TabsContent>

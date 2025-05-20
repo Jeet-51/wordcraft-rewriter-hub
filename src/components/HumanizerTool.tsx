@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,21 +7,26 @@ import { createHumanization, getProfile, updateProfile } from "@/lib/supabase";
 
 interface HumanizerToolProps {
   initialText?: string;
+  initialHumanizedText?: string;
 }
 
-export function HumanizerTool({ initialText = "" }: HumanizerToolProps) {
+export function HumanizerTool({ initialText = "", initialHumanizedText = "" }: HumanizerToolProps) {
   const [inputText, setInputText] = useState(initialText);
-  const [outputText, setOutputText] = useState("");
+  const [outputText, setOutputText] = useState(initialHumanizedText);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
 
-  // Update input when initialText prop changes
+  // Update input and output text when props change
   useEffect(() => {
     if (initialText) {
       setInputText(initialText);
     }
-  }, [initialText]);
+    
+    if (initialHumanizedText) {
+      setOutputText(initialHumanizedText);
+    }
+  }, [initialText, initialHumanizedText]);
 
   // This is a simplified humanize function - in a real app, you'd call an AI service
   const humanizeText = (text: string): string => {
