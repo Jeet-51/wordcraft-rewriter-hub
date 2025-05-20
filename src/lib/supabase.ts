@@ -20,6 +20,24 @@ export type Humanization = {
   created_at: string;
 };
 
+export type ContactMessage = {
+  id: string;
+  user_id: string | null;
+  name: string;
+  email: string;
+  message: string;
+  created_at: string;
+};
+
+export type PaymentRecord = {
+  id: string;
+  user_id: string;
+  plan_id: string;
+  plan_name: string;
+  amount: string;
+  created_at: string;
+};
+
 // Helper functions to interact with Supabase
 export const getProfile = async (userId: string) => {
   const { data, error } = await supabase
@@ -81,4 +99,60 @@ export const uploadDocument = async (userId: string, file: File) => {
     .getPublicUrl(fileName);
   
   return data.publicUrl;
+};
+
+// New functions for contact messages
+export const createContactMessage = async (name: string, email: string, message: string, userId?: string) => {
+  const contactData = {
+    name,
+    email,
+    message,
+    user_id: userId || null
+  };
+
+  const { data, error } = await supabase
+    .from('contact_messages')
+    .insert([contactData])
+    .select();
+
+  if (error) throw error;
+  return data[0] as ContactMessage;
+};
+
+export const getContactMessages = async (userId: string) => {
+  const { data, error } = await supabase
+    .from('contact_messages')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return data as ContactMessage[];
+};
+
+// New functions for payment history
+export const createPaymentRecord = async (userId: string, planId: string, planName: string, amount: string) => {
+  const { data, error } = await supabase
+    .from('payment_history')
+    .insert([{
+      user_id: userId,
+      plan_id: planId,
+      plan_name: planName,
+      amount
+    }])
+    .select();
+
+  if (error) throw error;
+  return data[0] as PaymentRecord;
+};
+
+export const getPaymentHistory = async (userId: string) => {
+  const { data, error } = await supabase
+    .from('payment_history')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return data as PaymentRecord[];
 };

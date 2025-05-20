@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { z } from "zod";
@@ -24,7 +23,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useAuth } from "@/context/AuthContext";
-import { getProfile, updateProfile } from "@/lib/supabase";
+import { getProfile, updateProfile, createPaymentRecord } from "@/lib/supabase";
 
 const formSchema = z.object({
   cardName: z.string().min(1, "Cardholder name is required"),
@@ -97,6 +96,14 @@ const Payment = () => {
         credits_used: 0,
         plan: planId as 'free' | 'pro' | 'enterprise'
       });
+
+      // Create a payment record in the database
+      await createPaymentRecord(
+        user.id,
+        planId,
+        selectedPlan.name,
+        selectedPlan.price
+      );
 
       toast({
         title: "Payment successful",

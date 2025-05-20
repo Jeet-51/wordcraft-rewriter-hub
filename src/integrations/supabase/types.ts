@@ -9,6 +9,33 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      contact_messages: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          message: string
+          name: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          message: string
+          name: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          message?: string
+          name?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       humanizations: {
         Row: {
           created_at: string | null
@@ -29,6 +56,33 @@ export type Database = {
           humanized_text?: string
           id?: string
           original_text?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      payment_history: {
+        Row: {
+          amount: string
+          created_at: string
+          id: string
+          plan_id: string
+          plan_name: string
+          user_id: string
+        }
+        Insert: {
+          amount: string
+          created_at?: string
+          id?: string
+          plan_id: string
+          plan_name: string
+          user_id: string
+        }
+        Update: {
+          amount?: string
+          created_at?: string
+          id?: string
+          plan_id?: string
+          plan_name?: string
           user_id?: string
         }
         Relationships: []

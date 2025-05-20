@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -15,8 +14,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
+import { createContactMessage } from "@/lib/supabase";
 
 const formSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -48,9 +47,13 @@ const Contact = () => {
     try {
       setIsLoading(true);
 
-      // In a real app with Supabase, we would save this to a contact_messages table
-      // Simulating a successful submission
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Save the contact message to Supabase
+      await createContactMessage(
+        data.name, 
+        data.email, 
+        data.message,
+        user?.id // Include the user ID if available
+      );
 
       toast({
         title: "Message sent",
