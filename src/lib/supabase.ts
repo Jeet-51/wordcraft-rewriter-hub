@@ -38,6 +38,15 @@ export type PaymentRecord = {
   created_at: string;
 };
 
+export type DocumentInfo = {
+  id: string;
+  file_name: string;
+  file_url: string;
+  file_type: string;
+  extracted_text?: string;
+  created_at: string;
+};
+
 // Helper functions to interact with Supabase
 export const getProfile = async (userId: string) => {
   const { data, error } = await supabase
@@ -119,6 +128,23 @@ export const uploadDocument = async (userId: string, file: File) => {
     console.error("Error with document storage:", error);
     throw error;
   }
+};
+
+// Function to extract text from document
+export const extractTextFromDocument = async (fileUrl: string, fileType: string): Promise<string> => {
+  // In a real implementation, this would call a document processing service or API
+  // For now, we'll simulate text extraction with a placeholder
+  console.log(`Extracting text from document: ${fileUrl}`);
+  
+  // Simple simulation of text extraction
+  // This would be replaced with actual API calls to services like DocumentAI, Azure Form Recognizer, etc.
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      const extractedText = `This is extracted text from the document at ${fileUrl}.\n\nThe document appears to contain several paragraphs of content that would typically be processed by an AI document understanding system. In a real implementation, we would extract the actual text content from the ${fileType} document.\n\nFor demonstration purposes, this is placeholder text that simulates what extracted content might look like. The actual implementation would connect to document processing APIs to extract real text content from the uploaded files.`;
+      
+      resolve(extractedText);
+    }, 1500); // Simulate processing time
+  });
 };
 
 // Updated function for contact messages to fix permission issues

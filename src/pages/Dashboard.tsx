@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { HumanizerTool } from "@/components/HumanizerTool";
+import { DocumentExtractor } from "@/components/DocumentExtractor"; 
 import { useToast } from "@/hooks/use-toast";
 import { 
   getProfile, 
@@ -24,6 +25,12 @@ const Dashboard = () => {
   const [humanizations, setHumanizations] = useState<Humanization[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadedDocument, setUploadedDocument] = useState<{
+    url: string;
+    name: string;
+    type: string;
+  } | null>(null);
+  const [extractedText, setExtractedText] = useState("");
 
   useEffect(() => {
     const loadUserData = async () => {
@@ -70,13 +77,13 @@ const Dashboard = () => {
     const file = files[0];
     
     // Check file type
-    const allowedTypes = ['.txt', '.docx'];
+    const allowedTypes = ['.txt', '.docx', '.pdf'];
     const fileExt = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
     
     if (!allowedTypes.includes(fileExt)) {
       toast({
         title: "Invalid file type",
-        description: "Only .txt and .docx files are supported.",
+        description: "Only .txt, .docx, and .pdf files are supported.",
         variant: "destructive",
       });
       return;
@@ -94,8 +101,15 @@ const Dashboard = () => {
         description: "Your file has been uploaded successfully.",
       });
       
-      // Here you would typically process the file and show results
-      console.log("File uploaded successfully:", fileUrl);
+      // Set the uploaded document info
+      setUploadedDocument({
+        url: fileUrl,
+        name: file.name,
+        type: fileExt.substring(1) // Remove the dot from the extension
+      });
+      
+      // Automatically switch to the documents tab
+      setActiveTab("documents");
       
     } catch (error: any) {
       console.error("Error uploading file:", error);
@@ -111,6 +125,12 @@ const Dashboard = () => {
         e.target.value = '';
       }
     }
+  };
+
+  const handleExtractedText = (text: string) => {
+    setExtractedText(text);
+    // Switch to humanizer tab with the extracted text
+    setActiveTab("humanizer");
   };
   
   if (!user) {
@@ -189,7 +209,7 @@ const Dashboard = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <HumanizerTool />
+                  <HumanizerTool initialText={extractedText} />
                 </CardContent>
               </Card>
             </TabsContent>
@@ -199,7 +219,7 @@ const Dashboard = () => {
                 <CardHeader>
                   <CardTitle>Upload Documents</CardTitle>
                   <CardDescription>
-                    Upload .txt or .docx files for humanization
+                    Upload .txt, .docx or .pdf files for humanization
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -208,7 +228,7 @@ const Dashboard = () => {
                       <input
                         id="file-upload"
                         type="file"
-                        accept=".txt,.docx"
+                        accept=".txt,.docx,.pdf"
                         onChange={handleFileUpload}
                         className="hidden"
                         disabled={isUploading}
@@ -237,7 +257,7 @@ const Dashboard = () => {
                           <span className="font-semibold text-primary">Click to upload</span> or drag and drop
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          TXT, DOCX (Max 10MB)
+                          TXT, DOCX, PDF (Max 10MB)
                         </p>
                         {isUploading && (
                           <p className="text-xs text-primary animate-pulse mt-2">
@@ -246,6 +266,18 @@ const Dashboard = () => {
                         )}
                       </label>
                     </div>
+
+                    {uploadedDocument && (
+                      <div className="space-y-4">
+                        <h3 className="font-medium">Document Processing</h3>
+                        <DocumentExtractor
+                          fileUrl={uploadedDocument.url}
+                          fileName={uploadedDocument.name}
+                          fileType={uploadedDocument.type}
+                          onExtracted={handleExtractedText}
+                        />
+                      </div>
+                    )}
 
                     <div className="space-y-2">
                       <h3 className="font-medium">Your Documents</h3>
