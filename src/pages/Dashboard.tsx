@@ -1,0 +1,323 @@
+
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Progress } from "@/components/ui/progress";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { HumanizerTool } from "@/components/HumanizerTool";
+import { useToast } from "@/hooks/use-toast";
+import { 
+  getProfile, 
+  getHumanizations, 
+  uploadDocument, 
+  type Profile, 
+  type Humanization
+} from "@/lib/supabase";
+
+const Dashboard = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState("humanizer");
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [humanizations, setHumanizations] = useState<Humanization[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadUserData = async () => {
+      if (!user) return;
+      
+      try {
+        setIsLoading(true);
+        
+        // Load user profile
+        const profileData = await getProfile(user.id);
+        setProfile(profileData);
+        
+        // Load user's humanization history
+        const humanizationData = await getHumanizations(user.id);
+        setHumanizations(humanizationData);
+      } catch (error) {
+        console.error("Error loading user data:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load your data. Please refresh and try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadUserData();
+  }, [user, toast]);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!user) return;
+    
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    
+    const file = files[0];
+    
+    // Check file type
+    const allowedTypes = ['.txt', '.docx'];
+    const fileExt = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+    
+    if (!allowedTypes.includes(fileExt)) {
+      toast({
+        title: "Invalid file type",
+        description: "Only .txt and .docx files are supported.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      // In a real app, we would process the file content here
+      // For this demo, we'll just upload the file
+      
+      const fileUrl = await uploadDocument(user.id, file);
+      
+      toast({
+        title: "File uploaded",
+        description: "Your file has been uploaded successfully.",
+      });
+      
+      // Here you would typically process the file and show results
+      
+    } catch (error: any) {
+      console.error("Error uploading file:", error);
+      toast({
+        title: "Upload failed",
+        description: error.message || "Failed to upload your file.",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  if (!user) {
+    return (
+      <div className="container py-16 text-center">
+        <h1 className="text-3xl font-bold mb-4">Access Denied</h1>
+        <p className="mb-8 text-muted-foreground">
+          Please login to access your dashboard.
+        </p>
+        <Link to="/login">
+          <Button>Sign In</Button>
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container py-10">
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-muted-foreground">
+            Manage your content humanization and account.
+          </p>
+        </div>
+
+        {profile && (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle>Credit Usage</CardTitle>
+              <CardDescription>
+                {profile.credits_used} of {profile.credits_total} credits used
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <Progress 
+                  value={(profile.credits_used / profile.credits_total) * 100} 
+                  className="h-2"
+                />
+                <div className="text-xs text-muted-foreground flex justify-between">
+                  <span>
+                    {profile.credits_total - profile.credits_used} credits remaining
+                  </span>
+                  <span className="capitalize">
+                    {profile.plan} Plan
+                  </span>
+                </div>
+              </div>
+              {profile.plan === "free" && (
+                <div className="mt-4">
+                  <Link to="/pricing">
+                    <Button variant="outline" size="sm">
+                      Upgrade Plan
+                    </Button>
+                  </Link>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        <Tabs defaultValue="humanizer" value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid grid-cols-3 w-full max-w-md">
+            <TabsTrigger value="humanizer">Humanizer</TabsTrigger>
+            <TabsTrigger value="documents">Documents</TabsTrigger>
+            <TabsTrigger value="history">History</TabsTrigger>
+          </TabsList>
+          <div className="mt-6">
+            <TabsContent value="humanizer" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>AI Text Humanizer</CardTitle>
+                  <CardDescription>
+                    Transform your AI-generated content to sound human-written
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <HumanizerTool />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="documents" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Upload Documents</CardTitle>
+                  <CardDescription>
+                    Upload .txt or .docx files for humanization
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-6">
+                    <div className="border-2 border-dashed rounded-lg p-8 text-center">
+                      <input
+                        id="file-upload"
+                        type="file"
+                        accept=".txt,.docx"
+                        onChange={handleFileUpload}
+                        className="hidden"
+                      />
+                      <label 
+                        htmlFor="file-upload" 
+                        className="cursor-pointer flex flex-col items-center justify-center space-y-2"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="24"
+                          height="24"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="text-muted-foreground"
+                        >
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                          <polyline points="17 8 12 3 7 8" />
+                          <line x1="12" x2="12" y1="3" y2="15" />
+                        </svg>
+                        <div className="text-sm">
+                          <span className="font-semibold text-primary">Click to upload</span> or drag and drop
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          TXT, DOCX (Max 10MB)
+                        </p>
+                      </label>
+                    </div>
+
+                    <div className="space-y-2">
+                      <h3 className="font-medium">Your Documents</h3>
+                      {humanizations.length > 0 ? (
+                        <div className="rounded-md border divide-y">
+                          {humanizations.slice(0, 5).map((item) => (
+                            <div key={item.id} className="p-4">
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <p className="font-medium truncate max-w-sm">
+                                    {item.original_text.substring(0, 30)}...
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {new Date(item.created_at).toLocaleDateString()}
+                                  </p>
+                                </div>
+                                <Button variant="ghost" size="sm">
+                                  View
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">
+                          You haven't uploaded any documents yet.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="history" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Humanization History</CardTitle>
+                  <CardDescription>
+                    View your recent text humanization history
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {humanizations.length > 0 ? (
+                    <div className="space-y-4">
+                      {humanizations.map((item) => (
+                        <div key={item.id} className="rounded-lg border p-4">
+                          <div className="text-sm text-muted-foreground mb-1">
+                            {new Date(item.created_at).toLocaleString()}
+                          </div>
+                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                            <div>
+                              <p className="text-xs font-semibold mb-1">Original:</p>
+                              <p className="text-sm whitespace-pre-wrap">
+                                {item.original_text.substring(0, 150)}
+                                {item.original_text.length > 150 && "..."}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-xs font-semibold mb-1">Humanized:</p>
+                              <p className="text-sm whitespace-pre-wrap">
+                                {item.humanized_text.substring(0, 150)}
+                                {item.humanized_text.length > 150 && "..."}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      <Button variant="outline" className="w-full">
+                        Load More
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-muted-foreground">
+                        No humanization history found.
+                      </p>
+                      <Button
+                        variant="outline"
+                        className="mt-4"
+                        onClick={() => setActiveTab("humanizer")}
+                      >
+                        Start Humanizing
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </div>
+        </Tabs>
+      </div>
+    </div>
+  );
+};
+
+export default Dashboard;
