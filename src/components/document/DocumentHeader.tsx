@@ -8,6 +8,8 @@ interface DocumentHeaderProps {
   isExtracting: boolean;
   isHumanizing: boolean;
   onExtract: () => void;
+  onHumanize?: () => void;
+  showHumanizeButton: boolean;
 }
 
 export function DocumentHeader({
@@ -15,7 +17,9 @@ export function DocumentHeader({
   fileType,
   isExtracting,
   isHumanizing,
-  onExtract
+  onExtract,
+  onHumanize,
+  showHumanizeButton
 }: DocumentHeaderProps) {
   return (
     <div className="flex items-center justify-between">
@@ -26,24 +30,38 @@ export function DocumentHeader({
           <p className="text-sm text-muted-foreground">{fileType.toUpperCase()} document</p>
         </div>
       </div>
-      <Button 
-        onClick={onExtract}
-        disabled={isExtracting || isHumanizing}
-      >
-        {isExtracting ? (
-          <>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Extracting...
-          </>
-        ) : isHumanizing ? (
-          <>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Humanizing...
-          </>
-        ) : (
-          "Extract & Humanize"
+      <div className="flex space-x-2">
+        <Button 
+          onClick={onExtract}
+          disabled={isExtracting || isHumanizing}
+        >
+          {isExtracting ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Extracting...
+            </>
+          ) : (
+            "Extract Text"
+          )}
+        </Button>
+        
+        {showHumanizeButton && onHumanize && (
+          <Button 
+            onClick={onHumanize}
+            disabled={isHumanizing}
+            variant="secondary"
+          >
+            {isHumanizing ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Humanizing...
+              </>
+            ) : (
+              "Humanize Text"
+            )}
+          </Button>
         )}
-      </Button>
+      </div>
     </div>
   );
 }
