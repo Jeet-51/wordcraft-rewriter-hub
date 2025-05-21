@@ -38,35 +38,35 @@ const Dashboard = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
-  useEffect(() => {
-    const loadUserData = async () => {
-      if (!user) return;
+  const loadUserData = async () => {
+    if (!user) return;
+    
+    try {
+      setIsLoading(true);
       
-      try {
-        setIsLoading(true);
-        
-        // Load user profile
-        const profileData = await getProfile(user.id);
-        setProfile(profileData);
-        
-        // Load user's humanization history
-        const humanizationData = await getHumanizations(user.id);
-        setHumanizations(humanizationData);
-        
-        // Set initial displayed items
-        setDisplayedHumanizations(humanizationData.slice(0, itemsPerPage));
-      } catch (error) {
-        console.error("Error loading user data:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load your data. Please refresh and try again.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
+      // Load user profile
+      const profileData = await getProfile(user.id);
+      setProfile(profileData);
+      
+      // Load user's humanization history
+      const humanizationData = await getHumanizations(user.id);
+      setHumanizations(humanizationData);
+      
+      // Set initial displayed items
+      setDisplayedHumanizations(humanizationData.slice(0, itemsPerPage));
+    } catch (error) {
+      console.error("Error loading user data:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load your data. Please refresh and try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  useEffect(() => {
     loadUserData();
   }, [user, toast]);
 
@@ -159,6 +159,8 @@ const Dashboard = () => {
                 setUploadedDocument={setUploadedDocument}
                 onExtractedText={handleExtractedText}
                 onViewDocument={handleViewDocument}
+                refreshHumanizations={loadUserData}
+                setActiveTab={setActiveTab}
               />
             </TabsContent>
 

@@ -13,13 +13,15 @@ interface DocumentExtractorProps {
   fileName: string;
   fileType: string;
   onExtracted: (text: string, humanizedText?: string) => void;
+  onHumanizeComplete?: () => void;
 }
 
 export function DocumentExtractor({
   fileUrl,
   fileName,
   fileType,
-  onExtracted
+  onExtracted,
+  onHumanizeComplete
 }: DocumentExtractorProps) {
   const { toast } = useToast();
   const { 
@@ -75,12 +77,12 @@ export function DocumentExtractor({
         description: "Humanizing the extracted text with your selected options. This may take up to a minute.",
       });
       
-      // Pass the humanization options to the API
+      // Pass the humanization options to the API with success callback
       const humanized = await humanizeContent(extractedText, {
         readability,
         purpose,
         strength: strength.toString()
-      });
+      }, onHumanizeComplete);
       
       if (humanized) {
         // Send back both original and humanized text

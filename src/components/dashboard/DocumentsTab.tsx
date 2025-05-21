@@ -13,6 +13,8 @@ interface DocumentsTabProps {
   setUploadedDocument: (doc: { url: string; name: string; type: string; } | null) => void;
   onExtractedText: (originalText: string, humanizedText?: string) => void;
   onViewDocument: (item: Humanization) => void;
+  refreshHumanizations: () => void;
+  setActiveTab: (tab: string) => void;
 }
 
 export const DocumentsTab = ({ 
@@ -21,7 +23,9 @@ export const DocumentsTab = ({
   uploadedDocument, 
   setUploadedDocument, 
   onExtractedText, 
-  onViewDocument 
+  onViewDocument, 
+  refreshHumanizations,
+  setActiveTab
 }: DocumentsTabProps) => {
   const { toast } = useToast();
   const [isUploading, setIsUploading] = useState(false);
@@ -89,6 +93,11 @@ export const DocumentsTab = ({
     }
   };
 
+  const handleHumanizeComplete = () => {
+    refreshHumanizations();
+    setActiveTab("history");
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -150,6 +159,7 @@ export const DocumentsTab = ({
                 fileName={uploadedDocument.name}
                 fileType={uploadedDocument.type}
                 onExtracted={onExtractedText}
+                onHumanizeComplete={handleHumanizeComplete}
               />
             </div>
           )}

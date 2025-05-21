@@ -17,7 +17,7 @@ export function useTextHumanization() {
   const { toast } = useToast();
   const { user } = useAuth();
 
-  const humanizeContent = async (text: string, options?: HumanizationOptions) => {
+  const humanizeContent = async (text: string, options?: HumanizationOptions, onSuccess?: () => void) => {
     if (!text.trim()) {
       toast({
         title: "Empty text",
@@ -110,6 +110,11 @@ export function useTextHumanization() {
         title: "Text humanized",
         description: "Your text has been successfully humanized with OpenAI.",
       });
+      
+      // Call the success callback if provided
+      if (onSuccess) {
+        onSuccess();
+      }
       
       return resultText;
     } catch (error: any) {
