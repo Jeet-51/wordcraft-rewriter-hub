@@ -309,9 +309,6 @@ src/
 - Keep components small and focused
 - Follow the existing code style
 
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🆘 Support
 
@@ -341,5 +338,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ---
 
 **Built with ❤️ using React, TypeScript, and Supabase**
-
-For more information, visit our [live demo](https://your-username.github.io/wordcraft-rewriter-hub/) or check out the [documentation](https://github.com/your-username/wordcraft-rewriter-hub/wiki).
