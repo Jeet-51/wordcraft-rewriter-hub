@@ -41,7 +41,7 @@ Visit the live application: [AI Humanizer](https://jeet-51.github.io/wordcraft-r
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/your-username/wordcraft-rewriter-hub.git
+   git clone https://github.com/jeet-51/wordcraft-rewriter-hub.git
    cd wordcraft-rewriter-hub
    ```
 
@@ -237,7 +237,7 @@ The project is pre-configured for GitHub Pages deployment:
 git push origin main
 
 # GitHub Actions will automatically deploy to:
-# https://your-username.github.io/wordcraft-rewriter-hub/
+# https://jeet-51.github.io/wordcraft-rewriter-hub/
 ```
 
 ### Manual Build
@@ -312,8 +312,8 @@ src/
 
 ## 🆘 Support
 
-- **Documentation**: [Project Wiki](https://github.com/your-username/wordcraft-rewriter-hub/wiki)
-- **Issues**: [GitHub Issues](https://github.com/your-username/wordcraft-rewriter-hub/issues)
+- **Documentation**: [Project Wiki](https://github.com/jeet-51/wordcraft-rewriter-hub/wiki)
+- **Issues**: [GitHub Issues](https://github.com/jeet-51/wordcraft-rewriter-hub/issues)
 - **Contact**: Use the contact form in the application
 
 ## 🙏 Acknowledgments
