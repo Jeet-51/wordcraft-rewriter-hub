@@ -16,7 +16,7 @@ Transform AI-generated content into natural, human-like text that bypasses AI de
 
 ## 🚀 Live Demo
 
-Visit the live application: [AI Humanizer](https://your-username.github.io/wordcraft-rewriter-hub/)
+Visit the live application: [AI Humanizer](https://jeet-51.github.io/wordcraft-rewriter-hub/)
 
 ## 🛠️ Tech Stack
 
